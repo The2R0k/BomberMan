@@ -31,3 +31,8 @@
 # Debug files
 *.dSYM/
 *.su
+
+# Vim files
+src/*.swo
+src/*.swp
+bin
