@@ -13,4 +13,11 @@ enum Cell {
   FIRE
 };
 
+struct field{
+	int **location;
+	int score;
+	int lenght;
+	int death;
+};
+
 #endif /* _COMMON_H_ */
