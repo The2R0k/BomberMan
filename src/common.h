@@ -13,7 +13,7 @@ enum Cell {
   FIRE
 };
 
-struct field{
+struct Field{
   int **location;
   int score;
   int lenght;
