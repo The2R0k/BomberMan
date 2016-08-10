@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-struct StatTable {
+struct StatsTable {
   struct Dklb player_stats[MAX_PLAYER_AMOUNT];
 };
 
