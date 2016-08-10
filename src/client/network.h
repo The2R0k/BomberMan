@@ -13,8 +13,6 @@
 #include <sys/epoll.h>
 #include <sys/wait.h>
 
-#define BUFSIZE 1024
-
 void initNetwork();
 void shutdownNetwork();
 void sendMsg();

@@ -2,7 +2,7 @@
 #define _POSITION_H_
 
 /*message from client to server*/
-struct MesgToServer {
+struct Position {
   /*player's id*/
   int id;
   /*bomb position*/
@@ -12,5 +12,7 @@ struct MesgToServer {
   int x_pos_player;
   int y_pos_player;
 };
+
+#define MESGSIZE sizeof(struct Position)
 
 #endif /* _POSITION_H_ */

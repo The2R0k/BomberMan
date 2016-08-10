@@ -1,11 +1,11 @@
 #include "network.h"
+#include "../include/position.h"
 
 int tcp_sock, udp_sock;
 int port;
 char address[INET_ADDRSTRLEN];
-char sendBuf[BUFSIZE];
-char recvBuf[BUFSIZE];
-const int on = 1;
+char sendBuf[MESGSIZE];
+char recvBuf[MESGSIZE];
 struct sockaddr_in server_addr;
 
 void initNetwork() {
@@ -21,39 +21,15 @@ void initNetwork() {
     exit(-1);
   }
 
-  if (setsockopt(tcp_sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &on, sizeof(on)) < 0) {
-    perror("setsockopt()");
-    close(tcp_sock);
-    exit(-1);
-  }
-
-  if (bind(tcp_sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
-    perror("bind()");
-    close(tcp_sock);
-    exit(-1);
-  }
-
-  if (listen(tcp_sock, 4) < 0) {
-    perror("listen()");
-    close(tcp_sock);
+  /*connect tcp socket*/
+  if (connect(tcp_sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+    perror("connect()");
     exit(-1);
   }
 
   /*Create udp socket*/
   if ((udp_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
     perror("socket()");
-    exit(-1);
-  }
-
-  if (bind(udp_sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
-    perror("bind()");
-    close(udp_sock);
-    exit(-1);
-  }
-
-  /*connect tcp socket*/
-  if (connect(tcp_sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-    perror("connect()");
     exit(-1);
   }
 }
@@ -63,10 +39,20 @@ void shutdownNetwork() {
   close(udp_sock);
 }
 
-void sendMsg(/* arguments */) {
-  /* code */
+void sendMsg(struct Position msg) {
+  memcpy(sendBuf, &msg, MESGSIZE);
+
+  if (sendto(udp_sock, sendBuf, MESGSIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+    perror("send()");
+    close(udp_sock);
+    exit(-1);
+  }
 }
 
-void recvMsg(/* arguments */) {
-  /* code */
+void recvMsg() {
+  if (recv(tcp_sock, recvBuf, MESGSIZE, 0) < 0) {
+    perror("recv()");
+    close(tcp_sock);
+    exit(-1);
+  }
 }
