@@ -16,9 +16,15 @@ enum Cell {
 
 struct Field {
   int **location;
-  int score;
-  int lenght;
-  int death;
+};
+
+/* death, kill, length counters & bomb flaq (have or not)*/
+struct Dklb {
+  uint8_t score; /*how more players was killed*/
+  uint8_t lenght; /*length of fire. Up if player kill someone
+                    and drop if player die*/
+  uint8_t death; /* how more death*/
+  uint8_t bomb; /* 1 if player have a bomb and 0 if don't have*/
 };
 
 #endif /* _COMMON_H_ */
