@@ -7,8 +7,10 @@
 
 #include <stdint.h>
 
-#include "commmon.h"
+#include "common.h"
 #include "position.h"
+
+#define ACTIONSIZE sizeof(struct ActionCell)
 
 /**/
 struct ActionCell {

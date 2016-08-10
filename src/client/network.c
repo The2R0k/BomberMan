@@ -1,11 +1,11 @@
 #include "network.h"
-#include "../include/position.h"
+#include "../include/action_table.h"
 
 int tcp_sock, udp_sock;
 int port;
 char address[INET_ADDRSTRLEN];
-char sendBuf[MESGSIZE];
-char recvBuf[MESGSIZE];
+char sendBuf[ACTIONSIZE];
+char recvBuf[ACTIONSIZE];
 struct sockaddr_in server_addr;
 
 void initNetwork() {
@@ -39,10 +39,10 @@ void shutdownNetwork() {
   close(udp_sock);
 }
 
-void sendMsg(struct Position msg) {
-  memcpy(sendBuf, &msg, MESGSIZE);
+void sendMsg(struct ActionCell msg) {
+  memcpy(sendBuf, &msg, ACTIONSIZE);
 
-  if (sendto(udp_sock, sendBuf, MESGSIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+  if (sendto(udp_sock, sendBuf, ACTIONSIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
     perror("send()");
     close(udp_sock);
     exit(-1);
@@ -50,7 +50,7 @@ void sendMsg(struct Position msg) {
 }
 
 void recvMsg() {
-  if (recv(tcp_sock, recvBuf, MESGSIZE, 0) < 0) {
+  if (recv(tcp_sock, recvBuf, ACTIONSIZE, 0) < 0) {
     perror("recv()");
     close(tcp_sock);
     exit(-1);
