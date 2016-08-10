@@ -3,10 +3,12 @@
 int tcp_sock, udp_sock;
 int port;
 char address[INET_ADDRSTRLEN];
+char sendBuf[BUFSIZE];
+char recvBuf[BUFSIZE];
 const int on = 1;
+struct sockaddr_in server_addr;
 
 void initNetwork() {
-  struct sockaddr_in server_addr;
   bzero(&server_addr, sizeof(server_addr));
 
   server_addr.sin_family = AF_INET;
@@ -59,4 +61,12 @@ void initNetwork() {
 void shutdownNetwork() {
   close(tcp_sock);
   close(udp_sock);
+}
+
+void sendMsg(/* arguments */) {
+  /* code */
+}
+
+void recvMsg(/* arguments */) {
+  /* code */
 }
