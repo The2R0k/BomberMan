@@ -12,8 +12,8 @@
  *  \param [out] game_field Game field that will be generated.
  *  \param [out] stats_table Statistics table that will be generated.
  */
-void GenerateFieldAndStats(struct Field *game_field,
-                           struct StatsTable* stats_table);
+void GenerateFieldAndStats(struct Field **game_field,
+                           struct StatsTable **stats_table);
 
 /** /brief Update the game filed and statistics.
  *  \param [in] action_table Table contains players actions.
@@ -24,6 +24,6 @@ void GenerateFieldAndStats(struct Field *game_field,
  *  players actions that contain in action table.
  */
 void Update(const struct ActionTable *action_table,
-                struct Field *game_field, struct StatsTable *stats_table);
+            struct Field **game_field, struct StatsTable **stats_table);
 
-#endif
+#endif /* _LOGIC_H_ */
