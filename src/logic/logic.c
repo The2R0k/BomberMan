@@ -144,7 +144,7 @@ void RespawnPlayer(int player_num)
   g_field.location[i][j] = PLAYER_1 + player_num;
   g_res_time[player_num] = PLAYER_ALIVE;
   g_table.player_stats[player_num].bomb = 1;
-  g_table.player_stats[player_num].lenght = 1;
+  g_table.player_stats[player_num].length = 1;
 }
 
 void DecreaseRespawn(void)
