@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include "commmon.h"
+#include "common.h"
 #include "position.h"
 
 /**/
@@ -15,7 +15,14 @@ struct ActionCell {
   uint8_t suicide;
   struct Position bomb_pos;
   struct Position move_pos;
-};
+}__attribute__((__packed__ ));
+
+/*Structure that client send to server.*/
+struct MsgToServer {
+  uint8_t id;
+  struct Position bomb_pos;
+  struct Position move_pos;
+}__attribute__((__packed__ ));
 
 /*  Structure that server transfer to logic module. */
 struct ActionTable {
