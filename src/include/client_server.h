@@ -6,6 +6,9 @@
 /*if server not full, server send new id*/
 /*next time, must sending with that id*/
 
+#include position.h
+#include common.h
+
 struct ClientToServer
 {
   uint8_t id;
