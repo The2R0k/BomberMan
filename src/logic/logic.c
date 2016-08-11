@@ -2,6 +2,9 @@
 
 #define PLAYER_ALIVE -1
 
+#include <time.h>
+#include <stdlib.h>
+
 struct BombInfo
 {
   uint8_t d_time;  /* Detonate time. */
@@ -53,10 +56,10 @@ static void RemoveSuicides(const struct ActionTable *action_table,
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
     if (action_table->player_info[i].suicide) {
-      stats_table->player_stats[i].score  = 0;
+      stats_table->player_stats[i].score = 0;
       stats_table->player_stats[i].length = 0;
-      stats_table->player_stats[i].death  = 0;
-      stats_table->player_stats[i].bomb   = 0;
+      stats_table->player_stats[i].death = 0;
+      stats_table->player_stats[i].bomb = 0;
 
       g_player_pos[i].x = 0;
       g_player_pos[i].y = 0;
@@ -71,7 +74,7 @@ static void RemoveSuicides(const struct ActionTable *action_table,
 static int CanPlant(int player_num, struct Postion bomb_pos)
 {
   return !(g_bomb_info[player_num].pos.x == bomb_pos.x &&
-           g_bomb_info[player_num].pos.y == bomb_pos.y );
+           g_bomb_info[player_num].pos.y == bomb_pos.y);
 }
 
 static void PlantBomb(struct Position pos)
@@ -103,7 +106,7 @@ static void MovePlayer(int player_num, struct Position next_pos)
 {
   g_field[g_player_pos[player_num].y][g_player_pos[player_num].x] = EMPTY;
   g_field[next_pos.y][next_pos.x] = (enum Cell) player_num;
-  
+
   g_player_pos[player_num] = next_pos;
 }
 
@@ -129,7 +132,16 @@ static void Boom(void)
 
 static void RespawnPlayer(int player_num)
 {
+  int i, j;
+  do {
+    i = rand() % FIELD_SIZE;
+    j = rand() % FIELD_SIZE;
+  } while (g_field.location[i][j] != EMPTY);
 
+  g_field.location[i][j] = PLAYER_1 + player_num;
+  g_res_time[player_num] = PLAYER_ALIVE;
+  g_table.player_stats[player_num].bomb = 1;
+  g_table.player_stats[player_num].lenght = 1;
 }
 
 static void DecreaseRespawn(void)
@@ -140,7 +152,7 @@ static void DecreaseRespawn(void)
     if (g_player_pos[i].x == 0) {
       continue;
     }
-    
+
     if (g_res_time[i] == 0) {
       RespawnPlayer(i);
     }
@@ -169,7 +181,7 @@ void Update(const struct ActionTable *action_table,
 static void FillField()
 {
   enum Cell **field;
-
+  int i, j;
   field = g_field.location;
 
   for (i = 1; i < FIELD_SIZE; i += 2) {
@@ -199,13 +211,12 @@ static void FillField()
   field[0][FIELD_SIZE - 1] = EMPTY;
   field[0][FIELD_SIZE - 2] = EMPTY;
   field[1][FIELD_SIZE - 1] = EMPTY;
-
-  *game_field = &g_field;
 }
 
 void SetUp(struct Field **game_field,
            struct StatsTanle **stats_table)
 {
+  srand(0);
   uint16_t i, j;
   *game_field = 0;
   *stats_table = 0;
@@ -213,17 +224,19 @@ void SetUp(struct Field **game_field,
   /* Code below instantiate 2-dimentional array
    * First dimention is an array of pointers
    * Second dimention is an linear buffer of enum Cell */
-  g_field.location = calloc(sizeof(void *) * FIELD_SIZE);
+  g_field.location = malloc(sizeof(void *) * FIELD_SIZE);
   if (g_field.location == 0) {
     perror("Field alloc(1) error");
     return;
   }
+  memset(g_field.location, 0, sizeof(void *) * FIELD_SIZE);
 
-  g_field.location[0] = calloc(sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
+  g_field.location[0] = malloc(sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
   if (g_field.location == 0) {
     perror("Field alloc(2) error");
     return;
   }
+  memset(g_field.location[0], 0, sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
 
   for (i = 1; i < FIELD_SIZE; ++i) {
     g_field.location[i] = g_field.location[0] + FIELD_SIZE * i;
@@ -247,7 +260,7 @@ void SetUp(struct Field **game_field,
   memset(g_player_pos, 0, sizeof(g_player_pos));
 }
 
-void TearDown()
+void TearDown(void)
 {
   free(g_field.location[0]);
   free(g_field.location);
