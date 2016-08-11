@@ -36,3 +36,6 @@
 src/*.swo
 src/*.swp
 bin
+
+# IDEA
+.idea
