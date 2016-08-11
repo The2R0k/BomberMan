@@ -127,8 +127,6 @@ void Update(const struct ActionTable *action_table,
   DecreaseRespawn();
 }
 
-#define FIELD_SIZE (19)
-
 void SetUp(struct Field **game_field,
            struct StatsTanle **stats_table)
 {
