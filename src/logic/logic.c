@@ -4,7 +4,7 @@
 
 struct BombInfo
 {
-  uint8_t d_time; /*  Detonate time. */
+  uint8_t d_time;  /* Detonate time. */
   struct Position pos;
 };
 
@@ -166,33 +166,12 @@ void Update(const struct ActionTable *action_table,
   DecreaseRespawn();
 }
 
-void SetUp(struct Field **game_field,
-           struct StatsTanle **stats_table)
+static void FillField()
 {
-  uint16_t i, j;
-  enum Cell ** field;
-  *game_field = 0;
-
-  /* Code below instantiate 2-dimentional array
-   * First dimention is an array of pointers
-   * Second dimention is an linear blob of enum Cell */
-  g_field.location = calloc(sizeof(void *) * FIELD_SIZE);
-  if (g_field.location == 0) {
-    perror("Field alloc(1) error");
-    return;
-  }
-
-  g_field.location[0] = calloc(sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
-  if (g_field.location == 0) {
-    perror("Field alloc(2) error");
-    return;
-  }
-
-  for (i = 1; i < FIELD_SIZE; ++i) {
-    g_field.location[i] = g_field.location[0] + FIELD_SIZE * i;
-  }
+  enum Cell **field;
 
   field = g_field.location;
+
   for (i = 1; i < FIELD_SIZE; i += 2) {
     for (j = 1; j < FIELD_SIZE; j += 2) {
       field[i][j] = WALL;
@@ -205,8 +184,6 @@ void SetUp(struct Field **game_field,
     }
   }
 
-  /* Filling corners
-   * FIXME : move to standalone function */
   field[0][0] = EMPTY;
   field[0][1] = EMPTY;
   field[1][0] = EMPTY;
@@ -224,4 +201,54 @@ void SetUp(struct Field **game_field,
   field[1][FIELD_SIZE - 1] = EMPTY;
 
   *game_field = &g_field;
+}
+
+void SetUp(struct Field **game_field,
+           struct StatsTanle **stats_table)
+{
+  uint16_t i, j;
+  *game_field = 0;
+  *stats_table = 0;
+
+  /* Code below instantiate 2-dimentional array
+   * First dimention is an array of pointers
+   * Second dimention is an linear buffer of enum Cell */
+  g_field.location = calloc(sizeof(void *) * FIELD_SIZE);
+  if (g_field.location == 0) {
+    perror("Field alloc(1) error");
+    return;
+  }
+
+  g_field.location[0] = calloc(sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
+  if (g_field.location == 0) {
+    perror("Field alloc(2) error");
+    return;
+  }
+
+  for (i = 1; i < FIELD_SIZE; ++i) {
+    g_field.location[i] = g_field.location[0] + FIELD_SIZE * i;
+  }
+
+  FillField();
+
+  *game_field = &g_field;
+
+  /* Init stats table */
+  memset(g_table.player_stats, 0, sizeof(struct Dklb) * MAX_PLAYER_AMOUNT);
+
+  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
+    g_table.player_stats[0].bomb = 1;
+    g_table.player_stats[0].lenght = 1;
+  }
+
+  *stats_table = &g_table;
+
+  memset(g_bomb_info, 0, sizeof(g_bomb_info));
+  memset(g_player_pos, 0, sizeof(g_player_pos));
+}
+
+void TearDown()
+{
+  free(g_field.location[0]);
+  free(g_field.location);
 }
