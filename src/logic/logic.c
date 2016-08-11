@@ -1,5 +1,7 @@
 #include "logic.h"
 
+#define PLAYER_ALIVE -1
+
 struct BombInfo
 {
   uint8_t d_time; /*  Detonate time. */
@@ -39,6 +41,8 @@ static void MovePlayers(const struct ActionTable *action_table);
 
 static void Boom(void);
 
+static void RespawnPlayer(int player_num);
+
 static void DecreaseRespawn(void);
 
 /* Definitons. */
@@ -53,6 +57,13 @@ static void RemoveSuicides(const struct ActionTable *action_table,
       stats_table->player_stats[i].length = 0;
       stats_table->player_stats[i].death  = 0;
       stats_table->player_stats[i].bomb   = 0;
+
+      g_player_pos[i].x = 0;
+      g_player_pos[i].y = 0;
+
+      g_bomb_info[i].d_time = -1;
+      g_bomb_info[i].pos.x = 0;
+      g_bomb_info[i].pos.y = 0;
     }
   }
 }
@@ -82,9 +93,18 @@ static void PlantBombs(struct ActionTable *action_table)
   }
 }
 
+static int CanMove(int player_num, struct Position next_pos)
+{
+  return (g_field.location[next_pos.y][next_pos.x] == EMPTY ||
+          g_field.location[next_pos.y][next_pos.x] == FIRE)
+}
+
 static void MovePlayer(int player_num, struct Position next_pos)
 {
+  g_field[g_player_pos[player_num].y][g_player_pos[player_num].x] = EMPTY;
+  g_field[next_pos.y][next_pos.x] = (enum Cell) player_num;
   
+  g_player_pos[player_num] = next_pos;
 }
 
 static void MovePlayers(const struct ActionTable *action_table)
@@ -104,12 +124,31 @@ static void MovePlayers(const struct ActionTable *action_table)
 
 static void Boom(void)
 {
+  /* TODO: write code. */
+}
+
+static void RespawnPlayer(int player_num)
+{
 
 }
 
 static void DecreaseRespawn(void)
 {
+  int i;
 
+  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
+    if (g_player_pos[i].x == 0) {
+      continue;
+    }
+    
+    if (g_res_time[i] == 0) {
+      RespawnPlayer(i);
+    }
+
+    if (g_res_time[i] != PLAYER_ALIVE) {
+      --g_res_time[i];
+    }
+  }
 }
 
 /*============================*/
@@ -184,4 +223,5 @@ void SetUp(struct Field **game_field,
   field[0][FIELD_SIZE - 2] = EMPTY;
   field[1][FIELD_SIZE - 1] = EMPTY;
 
+  *game_field = &g_field;
 }
