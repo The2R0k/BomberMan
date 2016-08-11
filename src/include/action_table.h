@@ -10,7 +10,7 @@
 #include "common.h"
 #include "position.h"
 
-#define ACTIONSIZE sizeof(struct ActionCell)
+#define MSGSIZE sizeof(struct MsgToServer)
 
 /**/
 struct ActionCell {

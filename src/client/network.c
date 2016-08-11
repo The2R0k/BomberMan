@@ -1,30 +1,21 @@
 #include "network.h"
-#include "../include/action_table.h"
 
+static int state;
 int tcp_sock, udp_sock;
-int port;
-char address[INET_ADDRSTRLEN];
-char sendBuf[ACTIONSIZE];
-char recvBuf[ACTIONSIZE];
+char tmp;
+char sendBuf[MSGSIZE];
+char recvBuf[MSGSIZE];
 struct sockaddr_in server_addr;
 
-void initNetwork() {
+void initNetwork(char const *argv[]) {
   bzero(&server_addr, sizeof(server_addr));
 
-  /*  take ip/port from config file
-   *  format example: 192.168.0.2:4444
+  /* take ip/port from argv
+   * format: ./client 192.168.0.2 4444
    */
-  FILE *fd;
-  if ((fd = fopen("config", "r")) < 0) {
-    perror("fopen()");
-    exit(-1);
-  }
-  
-  fgets(address, sizeof(address), fd);
-
   server_addr.sin_family = AF_INET;
-  server_addr.sin_addr.s_addr = inet_addr(address);
-  server_addr.sin_port = htons(port);
+  server_addr.sin_addr.s_addr = inet_addr(argv[1]);
+  server_addr.sin_port = htons(atoi(argv[2]));
 
   /*Create tcp socket*/
   if ((tcp_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -50,21 +41,38 @@ void shutdownNetwork() {
   close(udp_sock);
 }
 
-void sendMsg(struct ActionCell *msg) {
-  memcpy(sendBuf, &msg, ACTIONSIZE);
-  msg->suicide = 0;
+void sendMsg(struct MsgToServer *msg) {
+  if (state == CONNECT_NEW_PLAYER) {
+    msg->id = 0;
+    msg->bomb_pos.x = 0;
+    msg->bomb_pos.y = 0;
+    msg->move_pos.x = 0;
+    msg->move_pos.y = 0;
 
-  if (sendto(udp_sock, sendBuf, ACTIONSIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
-    perror("send()");
-    close(udp_sock);
-    exit(-1);
+    memcpy(sendBuf, &msg, MSGSIZE);
+
+    if (sendto(udp_sock, sendBuf, MSGSIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+      perror("send()");
+      close(udp_sock);
+      exit(-1);
+    }
+  } else if (state == PLAYER_DID_ACTION) {
+    memcpy(sendBuf, &msg, MSGSIZE);
+
+    if (sendto(udp_sock, sendBuf, MSGSIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+      perror("send()");
+      close(udp_sock);
+      exit(-1);
+    }
   }
 }
 
-void recvMsg() {
-  if (recv(tcp_sock, recvBuf, ACTIONSIZE, 0) < 0) {
+char recvMsg() {
+  if (recv(tcp_sock, recvBuf, MSGSIZE, 0) < 0) {
     perror("recv()");
     close(tcp_sock);
     exit(-1);
   }
+
+  return *recvBuf;
 }

@@ -12,10 +12,14 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/wait.h>
+#include "../include/action_table.h"
 
-void initNetwork();
+#define CONNECT_NEW_PLAYER 0
+#define PLAYER_DID_ACTION 1
+
+void initNetwork(char const *argv[]);
 void shutdownNetwork();
-void sendMsg();
-void recvMsg();
+void sendMsg(struct MsgToServer *msg);
+char recvMsg();
 
 #endif /* _NETWORK_H_ */
