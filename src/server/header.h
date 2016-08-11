@@ -21,6 +21,9 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 #include <stdarg.h>
-#include "../common.h"
+#include "../include/common.h"
+#include "../include/position.h"
+#include "../include/stats_table.h"
+#include "../include/action_table.h"
 
 #endif
