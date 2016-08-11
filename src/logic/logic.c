@@ -127,37 +127,12 @@ void Update(const struct ActionTable *action_table,
   DecreaseRespawn();
 }
 
-void SetUp(struct Field **game_field,
-           struct StatsTanle **stats_table)
+static void FillField()
 {
-  uint16_t i, j;
   enum Cell **field;
-  *game_field = 0;
-  *stats_table = 0;
-
-  /* Code below instantiate 2-dimentional array
-   * First dimention is an array of pointers
-   * Second dimention is an linear buffer of enum Cell */
-  g_field.location = calloc(sizeof(void *) * FIELD_SIZE);
-  if (g_field.location == 0) {
-    perror("Field alloc(1) error");
-    return;
-  }
-
-  g_field.location[0] = calloc(sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
-  if (g_field.location == 0) {
-    perror("Field alloc(2) error");
-    return;
-  }
-
-  /* Filling field
-   * FIXME : move to standalone function */
-
-  for (i = 1; i < FIELD_SIZE; ++i) {
-    g_field.location[i] = g_field.location[0] + FIELD_SIZE * i;
-  }
 
   field = g_field.location;
+
   for (i = 1; i < FIELD_SIZE; i += 2) {
     for (j = 1; j < FIELD_SIZE; j += 2) {
       field[i][j] = WALL;
@@ -186,6 +161,36 @@ void SetUp(struct Field **game_field,
   field[0][FIELD_SIZE - 2] = EMPTY;
   field[1][FIELD_SIZE - 1] = EMPTY;
 
+}
+
+void SetUp(struct Field **game_field,
+           struct StatsTanle **stats_table)
+{
+  uint16_t i, j;
+  *game_field = 0;
+  *stats_table = 0;
+
+  /* Code below instantiate 2-dimentional array
+   * First dimention is an array of pointers
+   * Second dimention is an linear buffer of enum Cell */
+  g_field.location = calloc(sizeof(void *) * FIELD_SIZE);
+  if (g_field.location == 0) {
+    perror("Field alloc(1) error");
+    return;
+  }
+
+  g_field.location[0] = calloc(sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
+  if (g_field.location == 0) {
+    perror("Field alloc(2) error");
+    return;
+  }
+
+  for (i = 1; i < FIELD_SIZE; ++i) {
+    g_field.location[i] = g_field.location[0] + FIELD_SIZE * i;
+  }
+
+  FillField();
+
   *game_field = &g_field;
 
   /* Init stats table */
@@ -197,4 +202,13 @@ void SetUp(struct Field **game_field,
   }
 
   *stats_table = &g_table;
+
+  memset(g_bomb_info, 0, sizeof(g_bomb_info));
+  memset(g_player_pos, 0, sizeof(g_player_pos));
+}
+
+void TearDown()
+{
+  free(g_field.location[0]);
+  free(g_field.location);
 }
