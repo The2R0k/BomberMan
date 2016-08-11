@@ -17,7 +17,10 @@
 #define CONNECT_NEW_PLAYER 0
 #define PLAYER_DID_ACTION 1
 
+static int state;
+
 void initNetwork(char const *argv[]);
+void registration(struct MsgToServer *msg);
 void shutdownNetwork();
 void sendMsg(struct MsgToServer *msg);
 char recvMsg();

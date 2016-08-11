@@ -1,6 +1,5 @@
 #include "network.h"
 
-static int state;
 int tcp_sock, udp_sock;
 char tmp;
 char sendBuf[MSGSIZE];
@@ -41,29 +40,30 @@ void shutdownNetwork() {
   close(udp_sock);
 }
 
+void registration(struct MsgToServer *msg) {
+  msg->id = 0;
+  msg->bomb_pos.x = 0;
+  msg->bomb_pos.y = 0;
+  msg->move_pos.x = 0;
+  msg->move_pos.y = 0;
+
+  memcpy(sendBuf, &msg, MSGSIZE);
+
+  if (sendto(udp_sock, sendBuf, MSGSIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+    perror("send()");
+    close(udp_sock);
+    exit(-1);
+  }
+}
+
 void sendMsg(struct MsgToServer *msg) {
-  if (state == CONNECT_NEW_PLAYER) {
-    msg->id = 0;
-    msg->bomb_pos.x = 0;
-    msg->bomb_pos.y = 0;
-    msg->move_pos.x = 0;
-    msg->move_pos.y = 0;
 
-    memcpy(sendBuf, &msg, MSGSIZE);
+  memcpy(sendBuf, &msg, MSGSIZE);
 
-    if (sendto(udp_sock, sendBuf, MSGSIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
-      perror("send()");
-      close(udp_sock);
-      exit(-1);
-    }
-  } else if (state == PLAYER_DID_ACTION) {
-    memcpy(sendBuf, &msg, MSGSIZE);
-
-    if (sendto(udp_sock, sendBuf, MSGSIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
-      perror("send()");
-      close(udp_sock);
-      exit(-1);
-    }
+  if (sendto(udp_sock, sendBuf, MSGSIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+    perror("send()");
+    close(udp_sock);
+    exit(-1);
   }
 }
 
