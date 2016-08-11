@@ -219,8 +219,8 @@ void FillField()
 void SetUp(struct Field **game_field,
            struct StatsTable **stats_table)
 {
+  uint16_t i;
   srand(0);
-  uint16_t i, j;
   *game_field = 0;
   *stats_table = 0;
 
@@ -254,7 +254,7 @@ void SetUp(struct Field **game_field,
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
     g_table.player_stats[0].bomb = 1;
-    g_table.player_stats[0].lenght = 1;
+    g_table.player_stats[0].length = 1;
   }
 
   *stats_table = &g_table;
