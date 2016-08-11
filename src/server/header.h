@@ -25,5 +25,6 @@
 #include "../include/position.h"
 #include "../include/stats_table.h"
 #include "../include/action_table.h"
+#include "../include/client_server.h"
 
 #endif
