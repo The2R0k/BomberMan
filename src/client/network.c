@@ -12,14 +12,14 @@ void initNetwork() {
   bzero(&server_addr, sizeof(server_addr));
 
   /*  take ip/port from config file
-   *  format example: 127.0.0.1:4444
+   *  format example: 192.168.0.2:4444
    */
   FILE *fd;
   if ((fd = fopen("config", "r")) < 0) {
     perror("fopen()");
     exit(-1);
   }
-
+  
   fgets(address, sizeof(address), fd);
 
   server_addr.sin_family = AF_INET;
