@@ -1,5 +1,7 @@
 #include "logic.h"
 
+#include "../include/position.h"
+
 #define PLAYER_ALIVE -1
 
 #include <time.h>
@@ -27,14 +29,13 @@ static uint8_t g_res_time[MAX_PLAYER_AMOUNT];  /* Respawn time. */
 /*                            */
 
 /* Interface. */
-static void RemoveSuicides(const struct ActionTable *action_table,
-                           struct StatsTable **stats_table);
+static void RemoveSuicides(const struct ActionTable *action_table);
 
-static int CanPlant(int player_num, struct Postion bomb_pos);
+static int CanPlant(int player_num, struct Position bomb_pos);
 
 static void PlantBomb(struct Position pos);
 
-static void PlantBombs(struct ActionTable *action_table);
+static void PlantBombs(const struct ActionTable *action_table);
 
 static int CanMove(int player_num, struct Position next_pos);
 
@@ -49,17 +50,16 @@ static void RespawnPlayer(int player_num);
 static void DecreaseRespawn(void);
 
 /* Definitons. */
-static void RemoveSuicides(const struct ActionTable *action_table,
-                           struct StatsTable **stats_table)
+void RemoveSuicides(const struct ActionTable *action_table)
 {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
     if (action_table->player_info[i].suicide) {
-      stats_table->player_stats[i].score = 0;
-      stats_table->player_stats[i].length = 0;
-      stats_table->player_stats[i].death = 0;
-      stats_table->player_stats[i].bomb = 0;
+      g_table.player_stats[i].score  = 0;
+      g_table.player_stats[i].length = 0;
+      g_table.player_stats[i].death  = 0;
+      g_table.player_stats[i].bomb   = 0;
 
       g_player_pos[i].x = 0;
       g_player_pos[i].y = 0;
@@ -71,46 +71,47 @@ static void RemoveSuicides(const struct ActionTable *action_table,
   }
 }
 
-static int CanPlant(int player_num, struct Postion bomb_pos)
+int CanPlant(int player_num, struct Position bomb_pos)
 {
   return !(g_bomb_info[player_num].pos.x == bomb_pos.x &&
            g_bomb_info[player_num].pos.y == bomb_pos.y);
 }
 
-static void PlantBomb(struct Position pos)
+void PlantBomb(struct Position pos)
 {
-  g_field[pos.y][pos.x] = BOMB;
+  g_field.location[pos.y][pos.x] = BOMB;
 }
 
-static void PlantBombs(struct ActionTable *action_table)
+void PlantBombs(const struct ActionTable *action_table)
 {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
     if (action_table->player_info[i].bomb_pos.x == 0) {
-      continue
+      continue;
     }
-    if (CanPlant(i, action_table->player_int[i].bomb_pos)) {
+    if (CanPlant(i, action_table->player_info[i].bomb_pos)) {
       PlantBomb(action_table->player_info[i].bomb_pos);
     }
   }
 }
 
-static int CanMove(int player_num, struct Position next_pos)
+int CanMove(int player_num, struct Position next_pos)
 {
   return (g_field.location[next_pos.y][next_pos.x] == EMPTY ||
-          g_field.location[next_pos.y][next_pos.x] == FIRE)
+          g_field.location[next_pos.y][next_pos.x] == FIRE);
 }
 
-static void MovePlayer(int player_num, struct Position next_pos)
+void MovePlayer(int player_num, struct Position next_pos)
 {
-  g_field[g_player_pos[player_num].y][g_player_pos[player_num].x] = EMPTY;
-  g_field[next_pos.y][next_pos.x] = (enum Cell) player_num;
-
+  g_field.location[g_player_pos[player_num].y][g_player_pos[player_num].x] =
+    EMPTY;
+  g_field.location[next_pos.y][next_pos.x] = (enum Cell) player_num;
+  
   g_player_pos[player_num] = next_pos;
 }
 
-static void MovePlayers(const struct ActionTable *action_table)
+void MovePlayers(const struct ActionTable *action_table)
 {
   int i;
 
@@ -125,12 +126,12 @@ static void MovePlayers(const struct ActionTable *action_table)
   }
 }
 
-static void Boom(void)
+void Boom(void)
 {
-  /* TODO: write code. */
+  int i;
 }
 
-static void RespawnPlayer(int player_num)
+void RespawnPlayer(int player_num)
 {
   int i, j;
   do {
@@ -144,7 +145,7 @@ static void RespawnPlayer(int player_num)
   g_table.player_stats[player_num].lenght = 1;
 }
 
-static void DecreaseRespawn(void)
+void DecreaseRespawn(void)
 {
   int i;
 
@@ -171,14 +172,14 @@ void Update(const struct ActionTable *action_table,
             struct Field **game_field, struct StatsTable **stats_table)
 {
   *game_field = &g_field;
-  RemoveSuicides(action_table, stats_table);
-  PlantsBombs(action_table);
+  RemoveSuicides(action_table);
+  PlantBombs(action_table);
   MovePlayers(action_table);
   Boom();
   DecreaseRespawn();
 }
 
-static void FillField()
+void FillField()
 {
   enum Cell **field;
   int i, j;
@@ -214,7 +215,7 @@ static void FillField()
 }
 
 void SetUp(struct Field **game_field,
-           struct StatsTanle **stats_table)
+           struct StatsTable **stats_table)
 {
   srand(0);
   uint16_t i, j;
