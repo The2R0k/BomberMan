@@ -10,6 +10,6 @@
 struct Position {
   uint8_t x,
   uint8_t y;
-};
+}__attribute__((__packed__ ));
 
 #endif /* _POSITION_H_ */
