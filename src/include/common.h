@@ -1,7 +1,10 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
+#include <stdint.h>
+
 #define MAX_PLAYER_AMOUNT 4
+#define FIELD_SIZE        19
 
 /*  Enum to represent a cell of game field. */
 enum Cell {
