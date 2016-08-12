@@ -1,13 +1,18 @@
 #ifndef _CLIENT_SERVER_H_
 #define _CLIENT_SERVER_H_
 
+#include "common.h"
+#include "position.h"
+
+#define CLIENT_MSG_SIZE sizeof(struct ClientToServer)
+#define SERVER_MSG_SIZE sizeof(struct ServerToClient)
+
 /*struct for send udp message to server*/
 /*first time sendig id: 0, bomb: 0;0, move 0;0*/
 /*if server not full, server send new id*/
 /*next time, must sending with that id*/
 
-struct ClientToServer
-{
+struct ClientToServer {
   uint8_t id;
   struct Position bomb;
   struct Position move;
@@ -16,8 +21,7 @@ struct ClientToServer
 /*struct to recv message from server*/
 /*first time sending new id, and new field*/
 
-struct ServerToClient
-{
+struct ServerToClient {
   uint8_t id;
   struct Field field;
   struct Dklb stats;
