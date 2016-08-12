@@ -124,8 +124,15 @@ void PlantBombs(const struct ActionTable *action_table)
 
 int CanMove(int player_num, struct Position next_pos)
 {
-  return (g_field.location[next_pos.y][next_pos.x] == EMPTY ||
-          g_field.location[next_pos.y][next_pos.x] == FIRE);
+  int IsInside = next_pos.x > 1 &&
+                 next_pos.y > 1 &&
+                 next_pos.x < (FIELD_SIZE - 1) &&
+                 next_pos.y < (FIELD_SIZE - 1);
+
+  int IsValid = (g_field.location[next_pos.y][next_pos.x] == EMPTY ||
+                 g_field.location[next_pos.y][next_pos.x] == FIRE);
+
+  return IsInside && IsValid;
 }
 
 void MovePlayer(int player_num, struct Position next_pos)
