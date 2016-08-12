@@ -151,10 +151,8 @@ void Boom(void) {
 
 void RespawnPlayer(int player_num) {
   int i, j;
-  do {
-    i = rand() % FIELD_SIZE;
-    j = rand() % FIELD_SIZE;
-  } while (g_field.location[i][j] != EMPTY);
+  i = (player_num < 2) ? 1 : FIELD_SIZE - 2;
+  j = (player_num % 2) ? 1 : FIELD_SIZE - 2;
 
   g_field.location[i][j] = PLAYER_1 + player_num;
   g_res_time[player_num] = PLAYER_ALIVE;
