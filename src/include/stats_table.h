@@ -1,4 +1,4 @@
-/*  Stats table structure. 
+/*  Stats table structure.
  *  \file stats_table.h
  */
 
