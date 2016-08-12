@@ -130,7 +130,7 @@ void MovePlayers(const struct ActionTable *action_table)
 
 void Boom(void)
 {
-  int i;
+
 }
 
 void RespawnPlayer(int player_num)
@@ -170,10 +170,8 @@ void DecreaseRespawn(void)
 /*                            */
 /* Interface definitions.     */
 /*                            */
-void Update(const struct ActionTable *action_table,
-            struct Field **game_field, struct StatsTable **stats_table)
+void Update(const struct ActionTable *action_table)
 {
-  *game_field = &g_field;
   RemoveSuicides(action_table);
   PlantBombs(action_table);
   MovePlayers(action_table);
