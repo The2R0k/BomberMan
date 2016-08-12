@@ -2,6 +2,7 @@
 *  This file containts algorythm of        * 
 *  field generation and imaging            *
 *  graphics.                               *
+*  gs = graphic sourses, ms = menu state   *
 * * * * * * * * * * * * * * * * * * * * * */
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,6 +10,13 @@
 #include <SDL2/SDL.h>
 #include "./include/common.h"
 #include "./include/bgraphics.h"
+
+// All the game states
+enum GameState { 
+  MAINMENU = 0,
+  GAME = 2,
+  GAMEMENU = 1
+};
 
 /* Creating the devides of field */
 void UpdateMatrix(enum Cell **matrix) {
@@ -53,21 +61,57 @@ void PrintGraphics(enum Cell **matrix) {
 int main(int argc, char const *argv[]) {
   srand(time(0)); // randomize
 
-  struct Field field_loc;
-  struct Dklb dklb_loc;
-  struct GraphSources gs = GraphicsInit();
+  SDL_Event event; // even (for example keyboard)
+  enum GameState game_state = MAINMENU; // current game state
+  int ms = 1; // current menu position
+  const Uint8 *keyboard_state = SDL_GetKeyboardState(NULL); // keyboard state. Maniplating flags like SDL_Scancode_<KEY>
+
+  struct Field field_loc; // game field
+  struct Dklb dklb_loc; //game states
+  struct GraphSources *gs = malloc(sizeof(struct GraphSources)); // graphic sourses
+  GraphicsInit(gs); // initializing graphics
 
 /* # initializing field # */
   field_loc.location = malloc(sizeof(enum Cell *) * FIELDSIZE);
-
   for (int i = 0; i < FIELDSIZE; i++) {
     field_loc.location[i] = malloc(sizeof(enum Cell) * FIELDSIZE);
-
     for (int j = 0; j < FIELDSIZE; j++) {
       field_loc.location[i][j] = 0;
     }
   }
 /* # end of initializing # */
+
+/* # test initializing of dklb# */
+  dklb_loc.score = 0;
+  dklb_loc.length = 1;
+  dklb_loc.death = 0;
+  dklb_loc.bomb = 0;
+
+/* # index menu # */
+  while (game_state == MAINMENU) {
+    MenuShow(gs, game_state, ms);
+    SDL_PollEvent(&event);
+    SDL_PumpEvents();
+    SDL_Delay(60);
+    if ((keyboard_state[SDL_SCANCODE_UP]) && (ms > 1))
+      ms--;
+    if ((keyboard_state[SDL_SCANCODE_DOWN]) && (ms < 3))
+      ms++;
+    if (keyboard_state[SDL_SCANCODE_RETURN])
+      switch (ms) {
+        case 1:
+          game_state = GAME;
+          break;
+        case 2:
+          CleanGraph(gs);
+          break;
+        default:
+          CleanGraph(gs);
+          exit(0);
+          break;
+      }
+  }
+/* # # */
 
   UpdateMatrix(field_loc.location);
 
@@ -76,28 +120,44 @@ int main(int argc, char const *argv[]) {
     FillMatrix(field_loc.location);
 /* # end # */
 
-  field_loc.location[14][12] = BOMB;
-  field_loc.location[12][3] = PLAYER_1;
-  field_loc.location[13][3] = PLAYER_2;
-  field_loc.location[15][8] = PLAYER_3;
-  field_loc.location[5][12] = PLAYER_4;
   PrintGraphics(field_loc.location);
+  RefreshState(field_loc, dklb_loc, gs);
 
-  ShowCurrentBar(field_loc, dklb_loc, gs);
-
-  field_loc.location[14][12] = FIRE;
-  field_loc.location[12][3] = EMPTY;
-  field_loc.location[13][3] = EMPTY;
-  field_loc.location[15][8] = EMPTY;
-  field_loc.location[5][12] = EMPTY;
-  field_loc.location[1][3] = PLAYER_1;
-  field_loc.location[1][4] = PLAYER_2;
-  field_loc.location[1][5] = PLAYER_3;
-  field_loc.location[1][6] = PLAYER_4;
-  ShowCurrentBar(field_loc, dklb_loc, gs);
-  gs = CleanGraph(gs);
+  game_state = GAME;
+/* Game cycle */
+  while (game_state != MAINMENU){
+    RefreshState(field_loc, dklb_loc, gs);
+    SDL_Delay(20);
+    SDL_PollEvent(&event);
+    SDL_PumpEvents();
+    if(keyboard_state[SDL_SCANCODE_ESCAPE]) { // if ESC pressed - we see menu
+      game_state = GAMEMENU;
+      ms = 1; // refreshing menu position
+      while (game_state == GAMEMENU) {
+        MenuShow(gs, game_state, ms);
+        SDL_Delay(20);
+        SDL_PollEvent(&event);
+        SDL_PumpEvents();
+        if ((keyboard_state[SDL_SCANCODE_UP]) && (ms > 1)) // if key pressed "UP"
+          ms--;
+        if ((keyboard_state[SDL_SCANCODE_DOWN]) && (ms < 2)) // if key pressed "DOWN"
+          ms++;
+        if (keyboard_state[SDL_SCANCODE_RETURN]) // if key pressed "ENTER", switching between menu positions
+          switch (ms) {
+            case 1:
+              game_state = GAME;
+              break;
+            default:
+              game_state = MAINMENU;
+              break;
+          }
+      }
+    }
+  } 
+  CleanGraph(gs);
 
   free(field_loc.location);
+  free(gs);
 
   return 0;
 }
