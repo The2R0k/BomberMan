@@ -21,7 +21,8 @@ struct BombInfo
   struct Position pos;
 };
 
-struct FireField {
+struct FireField
+{
   int **location;
 };
 
@@ -261,28 +262,28 @@ void DetonateBomb(struct Position bomb_pos)
   g_bomb_info[bomb_num].d_time = -1;
   g_bomb_info[bomb_num].pos.x = 0;
   g_bomb_info[bomb_num].pos.y = 0;
-  
-  DetonateSide(VERTICAL,   bomb_num);
+
+  DetonateSide(VERTICAL, bomb_num);
   DetonateSide(HORIZONTAL, bomb_num);
-} 
+}
 
 void DetonateSide(uint8_t horizontal, int bomb_num)
 {
   uint8_t *current_coord,
-          *end_coord;
+    *end_coord;
   uint8_t bomb_radius;
   struct Position current_pos,
-                  end_pos;
+    end_pos;
   enum Cell *current_cell;
 
   end_pos = current_pos = g_bomb_info[bomb_num].pos;
   bomb_radius = g_table.player_stats[bomb_num].length;
 
-  current_coord = horizontal ? &current_pos.x : &current_pos.y; 
+  current_coord = horizontal ? &current_pos.x : &current_pos.y;
   *current_coord -= bomb_radius;
   if (*current_coord < 0)
     *current_coord = 0;
-  
+
   end_coord = horizontal ? &end_pos.x : &end_pos.y;
   *end_coord += bomb_radius;
   if (*end_coord >= FIELD_SIZE)
@@ -340,40 +341,46 @@ void Update(const struct ActionTable *action_table)
 static void FillField()
 {
   enum Cell **field;
-  int i, j, deleted_boxes;
+  int i, j;
   int to_deletei, to_deletej;
   field = g_field.location;
 
-  for (i = 1; i < FIELD_SIZE; i += 2) {
-    for (j = 1; j < FIELD_SIZE; j += 2) {
-      field[i][j] = WALL;
-    }
-  }
-
-  for (i = 0; i < FIELD_SIZE; i += 2) {
-    for (j = 0; j < FIELD_SIZE; j += 2) {
+  for (i = 0; i < FIELD_SIZE; ++i) {
+    for (j = 0; j < FIELD_SIZE; ++j) {
       field[i][j] = BOX;
     }
   }
 
-  field[0][0] = EMPTY;
-  field[0][1] = EMPTY;
-  field[1][0] = EMPTY;
+  for (i = 2; i < FIELD_SIZE; i += 2) {
+    for (j = 2; j < FIELD_SIZE; j += 2) {
+      field[i][j] = WALL;
+    }
+  }
 
-  field[FIELD_SIZE - 1][0] = EMPTY;
-  field[FIELD_SIZE - 1][1] = EMPTY;
-  field[FIELD_SIZE - 2][0] = EMPTY;
+  field[1][1] = EMPTY;
+  field[1][2] = EMPTY;
+  field[2][1] = EMPTY;
 
-  field[FIELD_SIZE - 1][FIELD_SIZE - 1] = EMPTY;
-  field[FIELD_SIZE - 1][FIELD_SIZE - 2] = EMPTY;
-  field[FIELD_SIZE - 2][FIELD_SIZE - 1] = EMPTY;
+  field[FIELD_SIZE - 2][1] = EMPTY;
+  field[FIELD_SIZE - 2][2] = EMPTY;
+  field[FIELD_SIZE - 3][1] = EMPTY;
 
-  field[0][FIELD_SIZE - 1] = EMPTY;
-  field[0][FIELD_SIZE - 2] = EMPTY;
-  field[1][FIELD_SIZE - 1] = EMPTY;
+  field[FIELD_SIZE - 2][FIELD_SIZE - 2] = EMPTY;
+  field[FIELD_SIZE - 2][FIELD_SIZE - 3] = EMPTY;
+  field[FIELD_SIZE - 3][FIELD_SIZE - 2] = EMPTY;
 
-  for (i = 0; i < 35; ++i)
-  {
+  field[1][FIELD_SIZE - 2] = EMPTY;
+  field[1][FIELD_SIZE - 3] = EMPTY;
+  field[2][FIELD_SIZE - 2] = EMPTY;
+
+  for (i = 0; i < FIELD_SIZE; ++i) {
+    field[i][0] =
+    field[0][i] =
+    field[i][FIELD_SIZE - 1] =
+    field[FIELD_SIZE - 1][i] = WALL;
+  }
+
+  for (i = 0; i < 28; ++i) {
     do {
       to_deletei = rand() % FIELD_SIZE;
       to_deletej = rand() % FIELD_SIZE;
