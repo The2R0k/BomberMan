@@ -1,5 +1,6 @@
 #include "network.h"
 
+
 /* Global variables */
 int tcp_sock, udp_sock, client_sock;
 char tmp;
