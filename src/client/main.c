@@ -8,21 +8,21 @@ int main(int argc, char const *argv[]) {
   }
 
   // /*msg send to server*/
-  // struct ClientToServer *sendMsg;
-  // sendMsg = (struct ClientToServer *)malloc(CLIENT_MSG_SIZE);
+   struct ClientToServer *sendMsg;
+   sendMsg = (struct ClientToServer *)malloc(CLIENT_MSG_SIZE);
   // /*msg get from server*/
-  // struct ClientToServer *getMsg;
-  // getMsg = (struct ClientToServer *)malloc(SERVER_MSG_SIZE);
-  // // getMsg->field
+   struct ClientToServer *getMsg;
+   getMsg = (struct ClientToServer *)malloc(SERVER_MSG_SIZE);
+//   getMsg->field
   //
-  // initUDP(argv);
+   initUDP(argv);
   // /*send message*/
-  // registration(sendMsg);
+   registration(sendMsg);
   // /*recv message*/
-  // initTCP();
-  // getMsg = recvMsg2();
+   initTCP();
+   getMsg = recvMsg2();
   //
-  // printf("id = %d\n", getMsg->id);
+   printf("id = %d\n", getMsg->id);
 
 
 

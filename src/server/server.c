@@ -242,9 +242,23 @@ static int RunServer()
                         (struct sockaddr*)&(playerInfo[new_player_flaq].from),
                         from_len);
                     perror("connecting::");
-                    if(bv > FALSE)
+                    printf("now BV is :: %d \n",bv);
+                    if(bv == DEFAULT)
                     {
                         SendLog("Connected");
+                        msg->id = new_player_flaq;
+                        msg->bomb.x = DEFAULT;
+                        msg->bomb.y = DEFAULT;
+                        msg->move.x = DEFAULT;
+                        msg->move.y = DEFAULT;
+                        bv = send(playerInfo[new_player_flaq].sock_tcp,msg,
+                                    sizeof(struct ClientToServer),DEFAULT);
+                        printf("now BV is :: %d \n",bv);
+                        if(bv)
+                        {
+                            SendLog("sending complite sucefull");
+                            break;
+                        }
                     }
                     if(i==CONNECT_TRY_MAX -1)
                     {

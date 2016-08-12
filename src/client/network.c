@@ -117,12 +117,17 @@ struct ServerToClient * recvMsg() {
 struct ClientToServer * recvMsg2() {
   struct ClientToServer *recvMsg;
 
-  if (recv(tcp_sock, &recvMsg, SERVER_MSG_SIZE, 0) < 0) {
+  recvMsg = (struct ClientToServer*) malloc (sizeof(struct ClientToServer));
+
+  if (recv(client_sock, recvMsg, SERVER_MSG_SIZE, 0) < 0) {
     perror("recv()");
     close(client_sock);
     close(tcp_sock);
     exit(-1);
   }
+
+  printf("recived sucefull\n");
+  printf("message is:: %d:%d:%d:%d:%d; \n",recvMsg->id,recvMsg->bomb.x,recvMsg->bomb.y,recvMsg->move.x,recvMsg->move.y);
 
   return recvMsg;
 }
