@@ -15,8 +15,7 @@
 #include <string.h>
 #include <stdio.h>
 
-struct BombInfo
-{
+struct BombInfo {
   uint8_t d_time;  /* Detonate time. */
   struct Position pos;
 };
@@ -76,8 +75,7 @@ static void DetonateBomb(struct Position bomb_pos);
 static void DetonateSide(uint8_t horizontal, int bomb_num);
 
 /* Definitons. */
-void RemoveSuicides(const struct ActionTable *action_table)
-{
+void RemoveSuicides(const struct ActionTable *action_table) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
@@ -97,19 +95,16 @@ void RemoveSuicides(const struct ActionTable *action_table)
   }
 }
 
-int CanPlant(int player_num, struct Position bomb_pos)
-{
+int CanPlant(int player_num, struct Position bomb_pos) {
   return !(g_bomb_info[player_num].pos.x == bomb_pos.x &&
            g_bomb_info[player_num].pos.y == bomb_pos.y);
 }
 
-void PlantBomb(struct Position pos)
-{
+void PlantBomb(struct Position pos) {
   g_field.location[pos.y][pos.x] = BOMB;
 }
 
-void PlantBombs(const struct ActionTable *action_table)
-{
+void PlantBombs(const struct ActionTable *action_table) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
@@ -122,14 +117,12 @@ void PlantBombs(const struct ActionTable *action_table)
   }
 }
 
-int CanMove(int player_num, struct Position next_pos)
-{
+int CanMove(int player_num, struct Position next_pos) {
   return (g_field.location[next_pos.y][next_pos.x] == EMPTY ||
           g_field.location[next_pos.y][next_pos.x] == FIRE);
 }
 
-void MovePlayer(int player_num, struct Position next_pos)
-{
+void MovePlayer(int player_num, struct Position next_pos) {
   g_field.location[g_player_pos[player_num].y][g_player_pos[player_num].x] =
     EMPTY;
   g_field.location[next_pos.y][next_pos.x] = (enum Cell) player_num;
@@ -137,8 +130,7 @@ void MovePlayer(int player_num, struct Position next_pos)
   g_player_pos[player_num] = next_pos;
 }
 
-void MovePlayers(const struct ActionTable *action_table)
-{
+void MovePlayers(const struct ActionTable *action_table) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
@@ -152,14 +144,12 @@ void MovePlayers(const struct ActionTable *action_table)
   }
 }
 
-void Boom(void)
-{
+void Boom(void) {
   DecreaseBombTime();
   DecreaseFireTime();
 }
 
-void RespawnPlayer(int player_num)
-{
+void RespawnPlayer(int player_num) {
   int i, j;
   do {
     i = rand() % FIELD_SIZE;
@@ -172,8 +162,7 @@ void RespawnPlayer(int player_num)
   g_table.player_stats[player_num].length = 1;
 }
 
-void DecreaseRespawn(void)
-{
+void DecreaseRespawn(void) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
@@ -192,8 +181,7 @@ void DecreaseRespawn(void)
 }
 
 void KillPlayer(int victim_num, int killer_num,
-                struct Position murder_pos)
-{
+                struct Position murder_pos) {
   /* Changing statistics. */
   if (victim_num == killer_num) {
     /* Suicide. */
@@ -212,8 +200,7 @@ void KillPlayer(int victim_num, int killer_num,
   g_player_pos[victim_num].y = 0;
 }
 
-void DecreaseBombTime(void)
-{
+void DecreaseBombTime(void) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
@@ -226,8 +213,7 @@ void DecreaseBombTime(void)
   }
 }
 
-void DecreaseFireTime(void)
-{
+void DecreaseFireTime(void) {
   int i, j;
 
   for (i = 0; i < FIELD_SIZE; ++i) {
@@ -244,8 +230,7 @@ void DecreaseFireTime(void)
   }
 }
 
-void DetonateBomb(struct Position bomb_pos)
-{
+void DetonateBomb(struct Position bomb_pos) {
   int bomb_num = -1;
   int i;
 
@@ -261,28 +246,27 @@ void DetonateBomb(struct Position bomb_pos)
   g_bomb_info[bomb_num].d_time = -1;
   g_bomb_info[bomb_num].pos.x = 0;
   g_bomb_info[bomb_num].pos.y = 0;
-  
-  DetonateSide(VERTICAL,   bomb_num);
-  DetonateSide(HORIZONTAL, bomb_num);
-} 
 
-void DetonateSide(uint8_t horizontal, int bomb_num)
-{
+  DetonateSide(VERTICAL, bomb_num);
+  DetonateSide(HORIZONTAL, bomb_num);
+}
+
+void DetonateSide(uint8_t horizontal, int bomb_num) {
   uint8_t *current_coord,
-          *end_coord;
+    *end_coord;
   uint8_t bomb_radius;
   struct Position current_pos,
-                  end_pos;
+    end_pos;
   enum Cell *current_cell;
 
   end_pos = current_pos = g_bomb_info[bomb_num].pos;
   bomb_radius = g_table.player_stats[bomb_num].length;
 
-  current_coord = horizontal ? &current_pos.x : &current_pos.y; 
+  current_coord = horizontal ? &current_pos.x : &current_pos.y;
   *current_coord -= bomb_radius;
   if (*current_coord < 0)
     *current_coord = 0;
-  
+
   end_coord = horizontal ? &end_pos.x : &end_pos.y;
   *end_coord += bomb_radius;
   if (*end_coord >= FIELD_SIZE)
@@ -328,8 +312,7 @@ void DetonateSide(uint8_t horizontal, int bomb_num)
 /*                            */
 /* Interface definitions.     */
 /*                            */
-void Update(const struct ActionTable *action_table)
-{
+void Update(const struct ActionTable *action_table) {
   RemoveSuicides(action_table);
   PlantBombs(action_table);
   MovePlayers(action_table);
@@ -337,43 +320,48 @@ void Update(const struct ActionTable *action_table)
   DecreaseRespawn();
 }
 
-static void FillField()
-{
+static void FillField() {
   enum Cell **field;
-  int i, j, deleted_boxes;
+  int i, j;
   int to_deletei, to_deletej;
   field = g_field.location;
 
-  for (i = 1; i < FIELD_SIZE; i += 2) {
-    for (j = 1; j < FIELD_SIZE; j += 2) {
-      field[i][j] = WALL;
-    }
-  }
-
-  for (i = 0; i < FIELD_SIZE; i += 2) {
-    for (j = 0; j < FIELD_SIZE; j += 2) {
+  for (i = 0; i < FIELD_SIZE; ++i) {
+    for (j = 0; j < FIELD_SIZE; ++j) {
       field[i][j] = BOX;
     }
   }
 
-  field[0][0] = EMPTY;
-  field[0][1] = EMPTY;
-  field[1][0] = EMPTY;
+  for (i = 2; i < FIELD_SIZE; i += 2) {
+    for (j = 2; j < FIELD_SIZE; j += 2) {
+      field[i][j] = WALL;
+    }
+  }
 
-  field[FIELD_SIZE - 1][0] = EMPTY;
-  field[FIELD_SIZE - 1][1] = EMPTY;
-  field[FIELD_SIZE - 2][0] = EMPTY;
+  field[1][1] = EMPTY;
+  field[1][2] = EMPTY;
+  field[2][1] = EMPTY;
 
-  field[FIELD_SIZE - 1][FIELD_SIZE - 1] = EMPTY;
-  field[FIELD_SIZE - 1][FIELD_SIZE - 2] = EMPTY;
-  field[FIELD_SIZE - 2][FIELD_SIZE - 1] = EMPTY;
+  field[FIELD_SIZE - 2][1] = EMPTY;
+  field[FIELD_SIZE - 2][2] = EMPTY;
+  field[FIELD_SIZE - 3][1] = EMPTY;
 
-  field[0][FIELD_SIZE - 1] = EMPTY;
-  field[0][FIELD_SIZE - 2] = EMPTY;
-  field[1][FIELD_SIZE - 1] = EMPTY;
+  field[FIELD_SIZE - 2][FIELD_SIZE - 2] = EMPTY;
+  field[FIELD_SIZE - 2][FIELD_SIZE - 3] = EMPTY;
+  field[FIELD_SIZE - 3][FIELD_SIZE - 2] = EMPTY;
 
-  for (i = 0; i < 35; ++i)
-  {
+  field[1][FIELD_SIZE - 2] = EMPTY;
+  field[1][FIELD_SIZE - 3] = EMPTY;
+  field[2][FIELD_SIZE - 2] = EMPTY;
+
+  for (i = 0; i < FIELD_SIZE; ++i) {
+    field[i][0] =
+    field[0][i] =
+    field[i][FIELD_SIZE - 1] =
+    field[FIELD_SIZE - 1][i] = WALL;
+  }
+
+  for (i = 0; i < 28; ++i) {
     do {
       to_deletei = rand() % FIELD_SIZE;
       to_deletej = rand() % FIELD_SIZE;
@@ -385,8 +373,7 @@ static void FillField()
 }
 
 void SetUp(struct Field **game_field,
-           struct StatsTable **stats_table)
-{
+           struct StatsTable **stats_table) {
   uint16_t i;
   srand(0);
   *game_field = 0;
@@ -431,8 +418,7 @@ void SetUp(struct Field **game_field,
   memset(g_player_pos, 0, sizeof(g_player_pos));
 }
 
-void TearDown(void)
-{
+void TearDown(void) {
   free(g_field.location[0]);
   free(g_field.location);
 }
