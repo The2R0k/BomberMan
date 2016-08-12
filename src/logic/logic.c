@@ -58,10 +58,10 @@ void RemoveSuicides(const struct ActionTable *action_table)
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
     if (action_table->player_info[i].suicide) {
-      g_table.player_stats[i].score  = 0;
+      g_table.player_stats[i].score = 0;
       g_table.player_stats[i].length = 0;
-      g_table.player_stats[i].death  = 0;
-      g_table.player_stats[i].bomb   = 0;
+      g_table.player_stats[i].death = 0;
+      g_table.player_stats[i].bomb = 0;
 
       g_player_pos[i].x = 0;
       g_player_pos[i].y = 0;
@@ -109,7 +109,7 @@ void MovePlayer(int player_num, struct Position next_pos)
   g_field.location[g_player_pos[player_num].y][g_player_pos[player_num].x] =
     EMPTY;
   g_field.location[next_pos.y][next_pos.x] = (enum Cell) player_num;
-  
+
   g_player_pos[player_num] = next_pos;
 }
 
@@ -179,10 +179,11 @@ void Update(const struct ActionTable *action_table)
   DecreaseRespawn();
 }
 
-void FillField()
+static void FillField()
 {
   enum Cell **field;
-  int i, j;
+  int i, j, deleted_boxes;
+  int to_deletei, to_deletej;
   field = g_field.location;
 
   for (i = 1; i < FIELD_SIZE; i += 2) {
@@ -212,6 +213,17 @@ void FillField()
   field[0][FIELD_SIZE - 1] = EMPTY;
   field[0][FIELD_SIZE - 2] = EMPTY;
   field[1][FIELD_SIZE - 1] = EMPTY;
+
+  for (i = 0; i < 35; ++i)
+  {
+    do {
+      to_deletei = rand() % FIELD_SIZE;
+      to_deletej = rand() % FIELD_SIZE;
+    } while (g_field.location[to_deletei][to_deletej] != BOX);
+
+    g_field.location[to_deletei][to_deletej] = EMPTY;
+  }
+
 }
 
 void SetUp(struct Field **game_field,
