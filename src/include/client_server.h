@@ -12,8 +12,7 @@
 struct ClientToServer
 {
   uint8_t id;
-  struct Position bomb;
-  struct Position move;
+  uint8_t doing;
 }__attribute__((__packed__ ));
 
 /*struct to recv message from server*/
