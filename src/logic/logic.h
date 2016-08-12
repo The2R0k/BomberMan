@@ -27,4 +27,6 @@ void Update(const struct ActionTable *action_table);
  */
 void TearDown();
 
+void PrintTable(void);
+
 #endif /* _LOGIC_H_ */

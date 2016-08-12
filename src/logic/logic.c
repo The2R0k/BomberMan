@@ -3,8 +3,11 @@
 #include "../include/position.h"
 
 #define PLAYER_ALIVE -1
+#define PLAYER_INACTIVE -2
 
+#define NO_FIRE -1
 #define FIRE_TIME 3
+
 #define RESPAWN_TIME 11
 
 #define VERTICAL 0
@@ -16,12 +19,12 @@
 #include <stdio.h>
 
 struct BombInfo {
-  uint8_t d_time;  /* Detonate time. */
   struct Position pos;
+  uint8_t d_time;  /* Detonate time. */
 };
 
 struct FireField {
-  int **location;
+  int location[FIELD_SIZE][FIELD_SIZE];
 };
 
 /*============================*/
@@ -33,7 +36,7 @@ static struct StatsTable g_table;
 static struct BombInfo g_bomb_info[MAX_PLAYER_AMOUNT];
 static struct Position g_player_pos[MAX_PLAYER_AMOUNT];
 static uint8_t g_res_time[MAX_PLAYER_AMOUNT];  /* Respawn time. */
-static struct Field g_fire_field;
+static struct FireField g_fire_field;
 
 /*============================*/
 /*                            */
@@ -45,7 +48,7 @@ static void RemoveSuicides(const struct ActionTable *action_table);
 
 static int CanPlant(int player_num, struct Position bomb_pos);
 
-static void PlantBomb(struct Position pos);
+static void PlantBomb(uint8_t player_num, struct Position pos);
 
 static void PlantBombs(const struct ActionTable *action_table);
 
@@ -74,6 +77,10 @@ static void DetonateBomb(struct Position bomb_pos);
 
 static void DetonateSide(uint8_t horizontal, int bomb_num);
 
+static void FillField(void);
+
+static void InitializeFireField(void);
+
 /* Definitons. */
 void RemoveSuicides(const struct ActionTable *action_table) {
   int i;
@@ -100,8 +107,8 @@ int CanPlant(int player_num, struct Position bomb_pos) {
            g_bomb_info[player_num].pos.y == bomb_pos.y);
 }
 
-void PlantBomb(struct Position pos) {
-  g_field.location[pos.y][pos.x] = BOMB;
+void PlantBomb(uint8_t player_num, struct Position pos) {
+  g_field.location[pos.y][pos.x] = PLAYER_1_BOMB + player_num;
 }
 
 void PlantBombs(const struct ActionTable *action_table) {
@@ -112,15 +119,15 @@ void PlantBombs(const struct ActionTable *action_table) {
       continue;
     }
     if (CanPlant(i, action_table->player_info[i].bomb_pos)) {
-      PlantBomb(action_table->player_info[i].bomb_pos);
+      PlantBomb(i, action_table->player_info[i].bomb_pos);
     }
   }
 }
 
 int CanMove(int player_num, struct Position next_pos)
 {
-  int IsInside = next_pos.x > 1 &&
-                 next_pos.y > 1 &&
+  int IsInside = next_pos.x > 0 &&
+                 next_pos.y > 0 &&
                  next_pos.x < (FIELD_SIZE - 1) &&
                  next_pos.y < (FIELD_SIZE - 1);
 
@@ -131,10 +138,11 @@ int CanMove(int player_num, struct Position next_pos)
 }
 
 void MovePlayer(int player_num, struct Position next_pos) {
-  g_field.location[g_player_pos[player_num].y][g_player_pos[player_num].x] =
-    EMPTY;
-  g_field.location[next_pos.y][next_pos.x] = (enum Cell) player_num;
-
+  if (g_player_pos[player_num].x != 0) {
+    g_field.location[g_player_pos[player_num].y][g_player_pos[player_num].x] =
+      EMPTY;
+  }
+  g_field.location[next_pos.y][next_pos.x] = (enum Cell)(player_num + 1);
   g_player_pos[player_num] = next_pos;
 }
 
@@ -174,7 +182,8 @@ void DecreaseRespawn(void) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    if (g_res_time[i] == PLAYER_ALIVE) {
+    if (g_res_time[i] == PLAYER_ALIVE ||
+        g_res_time[i] == PLAYER_INACTIVE) {
       continue;
     }
 
@@ -226,7 +235,7 @@ void DecreaseFireTime(void) {
 
   for (i = 0; i < FIELD_SIZE; ++i) {
     for (j = 0; j < FIELD_SIZE; ++j) {
-      if (g_fire_field.location[i][j] > 0) {
+      if (g_fire_field.location[i][j] >= 0) {
         /* Decrease fire time. */
         --g_fire_field.location[i][j];
       }
@@ -286,8 +295,6 @@ void DetonateSide(uint8_t horizontal, int bomb_num) {
     switch (*current_cell) {
       case EMPTY:
         *current_cell = FIRE;
-        g_fire_field.location[current_pos.y][current_pos.x] = FIRE_TIME;
-        break;
       case FIRE:
         g_fire_field.location[current_pos.y][current_pos.x] = FIRE_TIME;
         break;
@@ -316,6 +323,17 @@ void DetonateSide(uint8_t horizontal, int bomb_num) {
   }
 }
 
+void InitializeFireField(void)
+{
+  int i, j;
+
+  for (i = 0; i < FIELD_SIZE; ++i) {
+    for (j = 0; j < FIELD_SIZE; ++j) {
+      g_fire_field.location[i][j] = NO_FIRE;
+    }
+  }
+}
+
 /*============================*/
 /*                            */
 /* Interface definitions.     */
@@ -325,10 +343,11 @@ void Update(const struct ActionTable *action_table) {
   PlantBombs(action_table);
   MovePlayers(action_table);
   Boom();
+  PrintTable();
   DecreaseRespawn();
 }
 
-static void FillField() {
+void FillField(void) {
   enum Cell **field;
   int i, j;
   int to_deletei, to_deletej;
@@ -383,6 +402,12 @@ static void FillField() {
 void SetUp(struct Field **game_field,
            struct StatsTable **stats_table) {
   uint16_t i;
+
+  if (game_field == 0 || stats_table == 0) {
+    perror("SetUp(): Argument pointer is null");
+    return;
+  }
+
   srand(0);
   *game_field = 0;
   *stats_table = 0;
@@ -392,14 +417,14 @@ void SetUp(struct Field **game_field,
    * Second dimention is an linear buffer of enum Cell */
   g_field.location = malloc(sizeof(void *) * FIELD_SIZE);
   if (g_field.location == 0) {
-    perror("Field alloc(1) error");
+    perror("SetUp(): Field alloc(1) error");
     return;
   }
   memset(g_field.location, 0, sizeof(void *) * FIELD_SIZE);
 
   g_field.location[0] = malloc(sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
   if (g_field.location == 0) {
-    perror("Field alloc(2) error");
+    perror("SetUp(): Field alloc(2) error");
     return;
   }
   memset(g_field.location[0], 0, sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
@@ -424,9 +449,53 @@ void SetUp(struct Field **game_field,
 
   memset(g_bomb_info, 0, sizeof(g_bomb_info));
   memset(g_player_pos, 0, sizeof(g_player_pos));
+  
+  InitializeFireField();
+  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
+    g_res_time[i] = PLAYER_INACTIVE;
+  }
 }
 
 void TearDown(void) {
   free(g_field.location[0]);
   free(g_field.location);
+}
+
+void PrintTable(void)
+{
+  int i, j;
+  char c;
+
+  for (i = 0; i < FIELD_SIZE; ++i) {
+    for (j = 0; j < FIELD_SIZE; ++j) {
+      switch (g_field.location[i][j]) {
+        case EMPTY:
+          c = '0';
+          break;
+        case PLAYER_1:
+        case PLAYER_2:
+        case PLAYER_3:
+        case PLAYER_4:
+          c = '0' + g_field.location[i][j];
+          break;
+        case BOX:
+          c = 'x';
+          break;
+        case BOMB:
+          c = 'B';
+          break;
+        case WALL:
+          c = 'W';
+          break;
+        case FIRE:
+          c = '*';
+          break;
+        default:
+          c = 'a' + g_field.location[i][j];
+      } 
+      printf("%c", c);
+    }
+    printf("\n");
+  }
+  printf("\n");
 }
