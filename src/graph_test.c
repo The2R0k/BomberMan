@@ -37,7 +37,7 @@ void FillMatrix(enum Cell **matrix) {
     }
   }
 }
-/* prints graphics >.< */
+/* prints map to console */
 void PrintGraphics(enum Cell **matrix) {
   for (int i = 0; i < FIELDSIZE; i++) {
     for (int j = 0; j < FIELDSIZE; j++) {
