@@ -1,38 +1,35 @@
 #ifndef _CLIENT_SERVER_H_
 #define _CLIENT_SERVER_H_
 
-/*struct for send udp message to server*/
-/*first time sendig id: 0, bomb: 0;0, move 0;0*/
-/*if server not full, server send new id*/
-/*next time, must sending with that id*/
+#include "position.h"
+#include "common.h"
 
-#include position.h
-#include common.h
-
-enum Doing 
-{
+enum Doing {
   NOTHING = 0,
   BOMB = 1,
-  MOVE_LEFT = 2,
+  MOVE_LEFT,
   MOVE_RIGHT,
   MOVE_TOP,
   MOVE_DOWN
 };
 
-struct ClientToServer
-{
+/* Struct for send udp message to server
+ * first time sending: id=0, bomb={0;0}, move={0;0}.
+ * If server is not full, server send new id
+ * next time, must sending with that id.
+ */
+ struct ClientToServer {
   uint8_t id;
   enum Doing doing;
-}__attribute__((__packed__ ));
+} __attribute__((packed));
 
-/*struct to recv message from server*/
-/*first time sending new id, and new field*/
-
-struct ServerToClient
-{
+/* Struct to recv message from server.
+ * First time sending new id and new field.
+ */
+struct ServerToClient {
   uint8_t id;
   struct Field field;
   struct Dklb stats;
-}__attribute__((__packed__ ));
+} __attribute__((packed));
 
-#endif
+#endif /* _CLIENT_SERVER_H_ */
