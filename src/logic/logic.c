@@ -201,16 +201,17 @@ void MovePlayer(int player_num, struct Position next_pos) {
   enum Cell *player_cell = &g_field.location[prev_pos->y][prev_pos->x];
   
   if (prev_pos->x != 0) {
-    /* Player on starting pos. */
+    /* Player is not on starting pos. */
     if (*player_cell == (PLAYER_1_BOMB + player_num)) {
-      /* Player on bomb. */
+      /* Player is on bomb. */
       *player_cell = BOMB;
     } else {
       *player_cell = EMPTY;
     }
   }
   if (g_fire_field.f_time[next_pos.y][next_pos.x] == NO_FIRE) {
-    g_field.location[next_pos.y][next_pos.x] = (enum Cell)(player_num + 1);
+    g_field.location[next_pos.y][next_pos.x] = (enum Cell)(PLAYER_1 +
+                                                           player_num);
     *prev_pos = next_pos;
   }
   else {
@@ -223,7 +224,7 @@ void MovingPhase(const struct ActionTable *action_table) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    if (g_player_info[i].state == INACTIVE) {
+    if (g_player_info[i].state != ALIVE) {
       continue;
     }  
 
@@ -305,9 +306,8 @@ void DecreaseResTime(int player_num) {
 void KillPlayer(int victim_num, int killer_num,
                 struct Position murder_pos) {
   ++g_table.player_stats[victim_num].death;
-  if (victim_num == killer_num) {
-    /* Suicide. */
-  } else {
+  if (victim_num != killer_num) {
+    /* Suicide is not murder! */
     ++g_table.player_stats[killer_num].score;
     if (g_table.player_stats[killer_num].length > FIELD_SIZE)
       ++g_table.player_stats[killer_num].length;
@@ -385,14 +385,14 @@ void DetonateSide(uint8_t horizontal, int bomb_num) {
       case PLAYER_2:
       case PLAYER_3:
       case PLAYER_4:
-        KillPlayer((int) (*current_cell - 1), bomb_num, current_pos);
+        KillPlayer((int) (*current_cell - PLAYER_1), bomb_num, current_pos);
         break;
       case PLAYER_1_BOMB:
       case PLAYER_2_BOMB:
       case PLAYER_3_BOMB:
       case PLAYER_4_BOMB:
         DetonateBomb(current_pos);
-        KillPlayer((int) (*current_cell - 1), bomb_num, current_pos);
+        KillPlayer((int) (*current_cell - PLAYER_1), bomb_num, current_pos);
         break;
     }
   }
