@@ -44,6 +44,11 @@ static struct PlayerInfo g_player_info[MAX_PLAYER_AMOUNT];
 
 /* Interface. */
 /**
+  \brief Convert move pos in action table from delta to absolute values.
+  \param [in,out] action_table Table is sent from server_module.
+*/
+static void ConvertActionTable(struct ActionTable *action_table);
+/**
   \brief Add new player in game.
   \param [in] action_table Table is sent from server module.
 */
@@ -57,7 +62,7 @@ static void SuicidePhase(const struct ActionTable *action_table);
 
 /**
   \brief Plant bombs.
-  \param [in] action_table Table is sent from server module.
+  \param [in,out] action_table Table is sent from server module.
 */
 static void PlantingPhase(struct ActionTable *action_table);
 
@@ -84,7 +89,6 @@ static void RespawnPhase(void);
 
 
 
-static void ConvertActionTable(struct ActionTable *action_table);
 
 static void FillFireCell(struct Position pos, int player_num);
 
@@ -101,7 +105,6 @@ static void MovePlayer(int player_num, struct Position next_pos);
 static void RespawnPlayer(int player_num);
 
 static void DecreaseResTime(int player_num);
-
 
 static void KillPlayer(int victim_num, int killer_num,
                        struct Position murder_pos);
