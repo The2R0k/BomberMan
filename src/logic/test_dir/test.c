@@ -7,6 +7,15 @@ struct StatsTable *stats_table;
 
 struct ActionTable action_table;
 
+void Initialize(void) {
+  int i;
+
+  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
+    action_table.player_info[i].suicide = 1;
+  }
+  action_table.player_info[0].suicide = 0;
+}
+
 void MovePlayer(int player_num, struct Position pos)
 {
   action_table.player_info[player_num].move_pos = pos;
@@ -46,12 +55,13 @@ int main(void)
   struct Position pos,
                   pos2;
 
+  Initialize();
+  SetUp(&field, &stats_table);
   action_table.player_info[0].suicide = 0;
   MakeNull(0);
   pos.x = 1;
   pos.y = 2;
   MovePlayer(0, pos);
-  SetUp(&field, &stats_table);
   Step(1);
 
   MakeBomb(0, pos);
@@ -62,7 +72,7 @@ int main(void)
   Step(2);
   MakeNull(0);
   Step(2);
-  Step(1);
+  Step(2);
   PrintStatsTable();
   return 0;
 }
