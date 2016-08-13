@@ -118,7 +118,8 @@ void SuicidePhase(const struct ActionTable *action_table) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    if (action_table->player_info[i].suicide) {
+    if (action_table->player_info[i].suicide &&
+        g_player_info[i].state != INACTIVE) {
       ++g_player_info[i].suicide_time;
       if (g_player_info[i].suicide_time == DISCONNECT_TIME) {
         DisconnectPlayer(i);
@@ -129,12 +130,13 @@ void SuicidePhase(const struct ActionTable *action_table) {
   }
 }
 
-int CanPlant(int player_num, struct Position bomb_pos) {
-  int is_player_on_bomb = 
+int CanPlant(int player_num, struct Position bomb_pos) { 
+  uint8_t has_bomb = g_table.player_stats[player_num].bomb;
+  uint8_t is_player_on_bomb = 
         g_player_info[player_num].bomb_info.pos.x == bomb_pos.x &&
         g_player_info[player_num].bomb_info.pos.y == bomb_pos.y;
   
-  return !is_player_on_bomb;
+  return (!is_player_on_bomb && has_bomb);
 }
 
 void PlantBomb(uint8_t player_num, struct Position pos) {
@@ -150,7 +152,7 @@ void PlantingPhase(struct ActionTable *action_table) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    if (g_player_info[i].state == INACTIVE) {
+    if (g_player_info[i].state != ALIVE) {
       continue;
     }
     
