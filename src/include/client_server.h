@@ -32,4 +32,5 @@ struct ServerToClient {
   struct Dklb stats;
 } __attribute__((packed));
 
+<<<<<<< HEAD
 #endif /* _CLIENT_SERVER_H_ */
