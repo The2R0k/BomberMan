@@ -113,11 +113,16 @@ void AddPlayers(const struct ActionTable *action_table) {
 
 void SuicidePhase(const struct ActionTable *action_table) {
   int i;
+  struct Position *pos = NULL;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
     if (action_table->player_info[i].suicide) {
+      pos = &g_player_info[i].pos;
+      
       g_player_info[i].state = INACTIVE;
       
+      g_field.location[pos->y][pos->x] = EMPTY;
+
       g_table.player_stats[i].score = 0;
       g_table.player_stats[i].length = 0;
       g_table.player_stats[i].death = 0;
@@ -234,12 +239,13 @@ void RespawnPlayer(int player_num) {
   if (g_player_info[player_num].res_time != 0)
     return;
 
-  i = (player_num < 2) ? 1 : FIELD_SIZE - 2;
-  j = (player_num % 2) ? 1 : FIELD_SIZE - 2;
+  i = (player_num < 2) ? MIN_COORD : MAX_COORD - 1;
+  j = (player_num % 2) ? MAX_COORD - 1 : MIN_COORD;
 
   g_field.location[i][j] = PLAYER_1 + player_num;
-  g_player_info[player_num].res_time = PLAYER_ALIVE;
   g_player_info[player_num].state = ALIVE;
+  g_player_info[player_num].pos.x = i;
+  g_player_info[player_num].pos.y = j;
   g_table.player_stats[player_num].bomb = 1;
   g_table.player_stats[player_num].length = 1;
 }
@@ -271,13 +277,13 @@ void RespawnPhase(void) {
       continue;
     }
 
-    RespawnPlayer(i);
     DecreaseResTime(i);
+    RespawnPlayer(i);
   }
 }
 
 void DecreaseResTime(int player_num) {
-  if (g_player_info[player_num].res_time != PLAYER_ALIVE) {
+  if (g_player_info[player_num].res_time != 0) {
     --g_player_info[player_num].res_time;
   }
 }
@@ -413,8 +419,8 @@ void Update(struct ActionTable *action_table) {
   MovingPhase(action_table);
   BoomPhase();
   FirePhase();
-  PrintTable(); /* TODO: remove before merge into logic_branch. */
   RespawnPhase();
+  PrintTable(); /* TODO: remove before merge into logic_branch. */
 }
 
 void FillField(void) {
@@ -566,6 +572,7 @@ void PrintTable(void) {
 void PrintStatsTable(void) {
   int i;
   
+  printf("=== Stats table ===\n");
   printf("D K L B\n");
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
     printf("PLAYER %d: %d %d %d %d\n", i, 
@@ -574,5 +581,14 @@ void PrintStatsTable(void) {
            g_table.player_stats[i].length,
            g_table.player_stats[i].bomb
            );
+  }
+}
+
+void PrintRespawnTime(void) {
+  int i;
+
+  printf("=== Resp time ===\n");
+  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
+    printf("%d %d\n", i + 1, g_player_info[i].res_time);
   }
 }

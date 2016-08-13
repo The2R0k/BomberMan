@@ -31,4 +31,6 @@ void PrintTable(void);
 
 void PrintStatsTable(void);
 
+void PrintRespawnTime(void);
+
 #endif /* _LOGIC_H_ */
