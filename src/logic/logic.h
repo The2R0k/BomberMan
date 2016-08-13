@@ -27,10 +27,4 @@ void Update(struct ActionTable *action_table);
  */
 void TearDown();
 
-void PrintTable(void);
-
-void PrintStatsTable(void);
-
-void PrintRespawnTime(void);
-
 #endif /* _LOGIC_H_ */

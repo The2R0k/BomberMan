@@ -8,9 +8,6 @@
 #include "include/fire_field.h"
 #include "include/player_info.h"
 
-#define PLAYER_ALIVE -1
-#define PLAYER_INACTIVE -2
-
 #define NO_FIRE -1
 #define FIRE_TIME 4
 #define DETONATION_TIME 3
@@ -385,8 +382,6 @@ void DetonateSide(uint8_t horizontal, int bomb_num) {
     switch (*current_cell) {
       case EMPTY:
         *current_cell = FIRE;
-        /* TEST: g_fire_field.time[current_pos.y][current_pos.x] = FIRE_TIME;
-        break; */
       case FIRE:
         FillFireCell(current_pos, bomb_num);
         break;
@@ -455,7 +450,6 @@ void Update(struct ActionTable *action_table) {
   BoomPhase();
   FirePhase();
   RespawnPhase();
-  PrintTable(); /* TODO: remove before merge into logic_branch. */
 }
 
 void FillField(void) {
@@ -564,66 +558,4 @@ void SetUp(struct Field **game_field,
 void TearDown(void) {
   free(g_field.location[0]);
   free(g_field.location);
-}
-
-void PrintTable(void) {
-  int i, j;
-  char c;
-
-  for (i = 0; i < FIELD_SIZE; ++i) {
-    for (j = 0; j < FIELD_SIZE; ++j) {
-      switch (g_field.location[i][j]) {
-        case EMPTY:
-          c = '0';
-          break;
-        case PLAYER_1:
-        case PLAYER_2:
-        case PLAYER_3:
-        case PLAYER_4:
-          c = '0' + g_field.location[i][j];
-          break;
-        case BOX:
-          c = 'x';
-          break;
-        case BOMB:
-          c = 'B';
-          break;
-        case WALL:
-          c = 'W';
-          break;
-        case FIRE:
-          c = '*';
-          break;
-        default:
-          c = 'a' + g_field.location[i][j];
-      } 
-      printf("%c", c);
-    }
-    printf("\n");
-  }
-  printf("\n");
-}
-
-void PrintStatsTable(void) {
-  int i;
-  
-  printf("=== Stats table ===\n");
-  printf("D K L B\n");
-  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    printf("PLAYER %d: %d %d %d %d\n", i, 
-           g_table.player_stats[i].death,
-           g_table.player_stats[i].score,
-           g_table.player_stats[i].length,
-           g_table.player_stats[i].bomb
-           );
-  }
-}
-
-void PrintRespawnTime(void) {
-  int i;
-
-  printf("=== Resp time ===\n");
-  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    printf("%d %d\n", i + 1, g_player_info[i].res_time);
-  }
 }
