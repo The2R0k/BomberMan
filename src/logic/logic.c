@@ -1,28 +1,27 @@
 #include "logic.h"
 
-#include "../include/position.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <time.h>
 
-#define PLAYER_ALIVE -1
+#include "include/fire_field.h"
+#include "include/player_info.h"
 
-#define FIRE_TIME 3
+#define NO_FIRE -1
+#define FIRE_TIME 4
+#define DETONATION_TIME 3
+#define DISCONNECT_TIME 6
+
 #define RESPAWN_TIME 11
 
 #define VERTICAL 0
 #define HORIZONTAL 1
 
-#include <time.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+#define MIN_COORD 1
+#define MAX_COORD 18
 
-struct BombInfo {
-  uint8_t d_time;  /* Detonate time. */
-  struct Position pos;
-};
-
-struct FireField {
-  int **location;
-};
+#define MAX_LENGTH 8
 
 /*============================*/
 /*                            */
@@ -30,10 +29,8 @@ struct FireField {
 /*                            */
 static struct Field g_field;
 static struct StatsTable g_table;
-static struct BombInfo g_bomb_info[MAX_PLAYER_AMOUNT];
-static struct Position g_player_pos[MAX_PLAYER_AMOUNT];
-static uint8_t g_res_time[MAX_PLAYER_AMOUNT];  /* Respawn time. */
-static struct Field g_fire_field;
+static struct FireField g_fire_field;
+static struct PlayerInfo g_player_info[MAX_PLAYER_AMOUNT];
 
 /*============================*/
 /*                            */
@@ -41,193 +38,294 @@ static struct Field g_fire_field;
 /*                            */
 
 /* Interface. */
-static void RemoveSuicides(const struct ActionTable *action_table);
+/** \brief Add new player in game.
+ *  \param [in] action_table Table is sent from server module.
+ * */
+static void AddPlayers(const struct ActionTable *action_table);
+
+/** \brief Remove all players that has been disconected.
+ *  \param [in] action_table Table is sent from server module.
+ * */
+static void SuicidePhase(const struct ActionTable *action_table);
+
+/** \brief Plant bombs.
+ *  \param [in] action_table Table is sent from server module.
+ * */
+static void PlantingPhase(struct ActionTable *action_table);
+
+/** \brief Make all players' movements.
+ *  \param [in] action_table Table is sent from server module.
+ * */
+static void MovingPhase(const struct ActionTable *action_table);
+
+/** \brief Detoante all bombs.
+ * */
+static void BoomPhase(void);
+
+/** \brief Decrease fire time. 
+ * */
+static void FirePhase(void);
+
+/** \brief Respawn players that need it.
+ * */
+static void RespawnPhase(void);
+
+
+
+static void FillFireCell(struct Position pos, int player_num);
+
+static void DisconnectPlayer(int player_num);
 
 static int CanPlant(int player_num, struct Position bomb_pos);
 
-static void PlantBomb(struct Position pos);
-
-static void PlantBombs(const struct ActionTable *action_table);
+static void PlantBomb(uint8_t player_num, struct Position pos);
 
 static int CanMove(int player_num, struct Position next_pos);
 
 static void MovePlayer(int player_num, struct Position next_pos);
 
-static void MovePlayers(const struct ActionTable *action_table);
-
-static void Boom(void);
-
 static void RespawnPlayer(int player_num);
 
-static void DecreaseRespawn(void);
+static void DecreaseResTime(int player_num);
 
 
 static void KillPlayer(int victim_num, int killer_num,
                        struct Position murder_pos);
-
-static void DecreaseBombTime(void);
-
-static void DecreaseFireTime(void);
 
 
 static void DetonateBomb(struct Position bomb_pos);
 
 static void DetonateSide(uint8_t horizontal, int bomb_num);
 
+static void FillField(void);
+
+static void InitializeFireField(void);
+
+static void InitializePlayersInfo(void);
+
 /* Definitons. */
-void RemoveSuicides(const struct ActionTable *action_table) {
+void AddPlayers(const struct ActionTable *action_table) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    if (action_table->player_info[i].suicide) {
-      g_table.player_stats[i].score = 0;
-      g_table.player_stats[i].length = 0;
-      g_table.player_stats[i].death = 0;
-      g_table.player_stats[i].bomb = 0;
-
-      g_player_pos[i].x = 0;
-      g_player_pos[i].y = 0;
-
-      g_bomb_info[i].d_time = -1;
-      g_bomb_info[i].pos.x = 0;
-      g_bomb_info[i].pos.y = 0;
+    if (!action_table->player_info[i].suicide &&
+        g_player_info[i].state == INACTIVE) {
+      RespawnPlayer(i);
     }
   }
 }
 
-int CanPlant(int player_num, struct Position bomb_pos) {
-  return !(g_bomb_info[player_num].pos.x == bomb_pos.x &&
-           g_bomb_info[player_num].pos.y == bomb_pos.y);
-}
-
-void PlantBomb(struct Position pos) {
-  g_field.location[pos.y][pos.x] = BOMB;
-}
-
-void PlantBombs(const struct ActionTable *action_table) {
+void SuicidePhase(const struct ActionTable *action_table) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    if (action_table->player_info[i].bomb_pos.x == 0) {
+    if (action_table->player_info[i].suicide &&
+        g_player_info[i].state != INACTIVE) {
+      ++g_player_info[i].suicide_time;
+      if (g_player_info[i].suicide_time == DISCONNECT_TIME) {
+        DisconnectPlayer(i);
+      }
+    } else {
+      g_player_info[i].suicide_time = 0;
+    }
+  }
+}
+
+int CanPlant(int player_num, struct Position bomb_pos) { 
+  uint8_t has_bomb = g_table.player_stats[player_num].bomb;
+  uint8_t is_player_on_bomb = 
+        g_player_info[player_num].bomb_info.pos.x == bomb_pos.x &&
+        g_player_info[player_num].bomb_info.pos.y == bomb_pos.y;
+  
+  return (!is_player_on_bomb && has_bomb);
+}
+
+void PlantBomb(uint8_t player_num, struct Position pos) {
+  g_field.location[pos.y][pos.x] = PLAYER_1_BOMB + player_num;
+  
+  g_player_info[player_num].bomb_info.pos = pos;
+  g_player_info[player_num].bomb_info.d_time = DETONATION_TIME;
+  
+  g_table.player_stats[player_num].bomb = 0;
+}
+
+void PlantingPhase(struct ActionTable *action_table) {
+  int i;
+
+  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
+    if (g_player_info[i].state != ALIVE) {
       continue;
     }
+    
     if (CanPlant(i, action_table->player_info[i].bomb_pos)) {
-      PlantBomb(action_table->player_info[i].bomb_pos);
+      PlantBomb(i, action_table->player_info[i].bomb_pos);
+      action_table->player_info[i].move_pos.x = 0;
+      action_table->player_info[i].move_pos.y = 0;
     }
   }
+}
+
+void FillFireCell(struct Position pos, int player_num) {
+  g_fire_field.cell[pos.y][pos.x].time = FIRE_TIME;
+  g_fire_field.cell[pos.y][pos.x].player_num = player_num;
+}
+
+void DisconnectPlayer(int player_num) {
+  struct Position *pos = &g_player_info[player_num].pos;
+        
+  g_field.location[pos->y][pos->x] = EMPTY;
+  
+  g_player_info[player_num].state = INACTIVE;
+  g_player_info[player_num].pos.x = 0;
+  g_player_info[player_num].pos.y = 0;
+  g_player_info[player_num].suicide_time = 0;
+  g_player_info[player_num].bomb_info.d_time = -1;
+  g_player_info[player_num].bomb_info.pos.x = 0;
+  g_player_info[player_num].bomb_info.pos.y = 0;
+  g_player_info[player_num].res_time = 0;
+  
+  g_table.player_stats[player_num].score = 0;
+  g_table.player_stats[player_num].length = 0;
+  g_table.player_stats[player_num].death = 0;
+  g_table.player_stats[player_num].bomb = 0; 
 }
 
 int CanMove(int player_num, struct Position next_pos) {
-  return (g_field.location[next_pos.y][next_pos.x] == EMPTY ||
-          g_field.location[next_pos.y][next_pos.x] == FIRE);
+  int is_inside = next_pos.x > 0 &&
+                  next_pos.y > 0 &&
+                  next_pos.x < (FIELD_SIZE - 1) &&
+                  next_pos.y < (FIELD_SIZE - 1);
+
+  int is_valid = (g_field.location[next_pos.y][next_pos.x] == EMPTY ||
+                  g_field.location[next_pos.y][next_pos.x] == FIRE);
+
+  return is_inside && is_valid;
 }
 
 void MovePlayer(int player_num, struct Position next_pos) {
-  g_field.location[g_player_pos[player_num].y][g_player_pos[player_num].x] =
-    EMPTY;
-  g_field.location[next_pos.y][next_pos.x] = (enum Cell) player_num;
-
-  g_player_pos[player_num] = next_pos;
+  struct Position *prev_pos = &g_player_info[player_num].pos;
+  enum Cell *player_cell = &g_field.location[prev_pos->y][prev_pos->x];
+  
+  if (prev_pos->x != 0) {
+    /* Player is not on starting pos. */
+    if (*player_cell == (PLAYER_1_BOMB + player_num)) {
+      /* Player is on bomb. */
+      *player_cell = BOMB;
+    } else {
+      *player_cell = EMPTY;
+    }
+  }
+  if (g_fire_field.cell[next_pos.y][next_pos.x].time == NO_FIRE) {
+    g_field.location[next_pos.y][next_pos.x] = (enum Cell)(PLAYER_1 +
+                                                           player_num);
+    *prev_pos = next_pos;
+  }
+  else {
+    KillPlayer(player_num,
+               g_fire_field.cell[next_pos.y][next_pos.x].player_num,
+               next_pos);
+  }
 }
 
-void MovePlayers(const struct ActionTable *action_table) {
+void MovingPhase(const struct ActionTable *action_table) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    if (action_table->player_info[i].move_pos.x == 0) {
+    if (g_player_info[i].state != ALIVE) {
       continue;
-    }
+    }  
 
     if (CanMove(i, action_table->player_info[i].move_pos)) {
-      MovePlayer(i, action_table->player_info[i].move_pos);
+      MovePlayer(i, action_table->player_info[i].move_pos);  
     }
   }
 }
 
-void Boom(void) {
-  DecreaseBombTime();
-  DecreaseFireTime();
+void BoomPhase(void) {
+  int i;
+
+  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
+    if (g_player_info[i].bomb_info.d_time > 0) {
+      --g_player_info[i].bomb_info.d_time;
+      if (g_player_info[i].bomb_info.d_time == 0) {
+        DetonateBomb(g_player_info[i].bomb_info.pos);
+      }
+    }
+  }
 }
 
 void RespawnPlayer(int player_num) {
   int i, j;
-  do {
-    i = rand() % FIELD_SIZE;
-    j = rand() % FIELD_SIZE;
-  } while (g_field.location[i][j] != EMPTY);
+  
+  if (g_player_info[player_num].res_time != 0)
+    return;
+
+  i = (player_num < 2) ? MIN_COORD : MAX_COORD - 1;
+  j = (player_num % 2) ? MAX_COORD - 1 : MIN_COORD;
 
   g_field.location[i][j] = PLAYER_1 + player_num;
-  g_res_time[player_num] = PLAYER_ALIVE;
+  g_player_info[player_num].state = ALIVE;
+  g_player_info[player_num].pos.x = i;
+  g_player_info[player_num].pos.y = j;
+  g_player_info[player_num].suicide_time = 0;
   g_table.player_stats[player_num].bomb = 1;
   g_table.player_stats[player_num].length = 1;
 }
 
-void DecreaseRespawn(void) {
+void FirePhase(void) {
+  int i, j;
+
+  for (i = 0; i < FIELD_SIZE; ++i) {
+    for (j = 0; j < FIELD_SIZE; ++j) {
+      if (g_fire_field.cell[i][j].time > 0) {
+        /* Decrease fire time. */
+        --g_fire_field.cell[i][j].time;
+        if (g_fire_field.cell[i][j].time == 0) {
+          /* Remove fire from game field. */
+          g_field.location[i][j] = EMPTY;
+          g_fire_field.cell[i][j].time = NO_FIRE;
+        }
+      } 
+    }
+  }
+}
+
+void RespawnPhase(void) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    if (g_res_time[i] == PLAYER_ALIVE) {
+    if (g_player_info[i].state == INACTIVE ||
+        g_player_info[i].state == ALIVE) {
       continue;
     }
 
-    if (g_res_time[i] == 0) {
-      RespawnPlayer(i);
-    }
+    DecreaseResTime(i);
+    RespawnPlayer(i);
+  }
+}
 
-    if (g_res_time[i] != PLAYER_ALIVE) {
-      --g_res_time[i];
-    }
+void DecreaseResTime(int player_num) {
+  if (g_player_info[player_num].res_time != 0) {
+    --g_player_info[player_num].res_time;
   }
 }
 
 void KillPlayer(int victim_num, int killer_num,
                 struct Position murder_pos) {
-  /* Changing statistics. */
-  if (victim_num == killer_num) {
-    /* Suicide. */
-    ++g_table.player_stats[victim_num].death;
-  } else {
+  ++g_table.player_stats[victim_num].death;
+  if (victim_num != killer_num) {
+    /* Suicide is not murder! */
     ++g_table.player_stats[killer_num].score;
-    if (g_table.player_stats[killer_num].length > FIELD_SIZE)
+    if (g_table.player_stats[killer_num].length <= MAX_LENGTH)
       ++g_table.player_stats[killer_num].length;
-
-    ++g_table.player_stats[victim_num].death;
   }
 
   g_field.location[murder_pos.y][murder_pos.x] = FIRE;
-  g_res_time[victim_num] = RESPAWN_TIME;
-  g_player_pos[victim_num].x = 0;
-  g_player_pos[victim_num].y = 0;
-}
-
-void DecreaseBombTime(void) {
-  int i;
-
-  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    if (g_bomb_info[i].d_time >= 0) {
-      --g_bomb_info[i].d_time;
-    }
-    if (g_bomb_info[i].d_time == 0) {
-      DetonateBomb(g_bomb_info[i].pos);
-    }
-  }
-}
-
-void DecreaseFireTime(void) {
-  int i, j;
-
-  for (i = 0; i < FIELD_SIZE; ++i) {
-    for (j = 0; j < FIELD_SIZE; ++j) {
-      if (g_fire_field.location[i][j] > 0) {
-        /* Decrease fire time. */
-        --g_fire_field.location[i][j];
-      }
-      if (g_fire_field.location[i][j] == 0) {
-        /* Remove fire from game field. */
-        g_field.location[i][j] = EMPTY;
-      }
-    }
-  }
+  g_player_info[victim_num].state = DEAD;
+  g_player_info[victim_num].res_time = RESPAWN_TIME;
+  g_player_info[victim_num].pos.x = 0;
+  g_player_info[victim_num].pos.y = 0;
+  g_table.player_stats[victim_num].bomb = 0;
 }
 
 void DetonateBomb(struct Position bomb_pos) {
@@ -235,42 +333,48 @@ void DetonateBomb(struct Position bomb_pos) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT && bomb_num == -1; ++i) {
-    if (bomb_pos.x == g_bomb_info[i].pos.x &&
-        bomb_pos.y == g_bomb_info[i].pos.y) {
+    if (bomb_pos.x == g_player_info[i].bomb_info.pos.x &&
+        bomb_pos.y == g_player_info[i].bomb_info.pos.y) {
       bomb_num = i;
     }
   }
 
-  /*  */
+  g_table.player_stats[bomb_num].bomb = 1;
+  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
+    if (g_field.location[bomb_pos.y][bomb_pos.x] == (PLAYER_1_BOMB + i)) {
+      /* Suicide. */
+      KillPlayer(i, i, bomb_pos);
+    }
+  }
   g_field.location[bomb_pos.y][bomb_pos.x] = FIRE;
-  g_bomb_info[bomb_num].d_time = -1;
-  g_bomb_info[bomb_num].pos.x = 0;
-  g_bomb_info[bomb_num].pos.y = 0;
-
   DetonateSide(VERTICAL, bomb_num);
   DetonateSide(HORIZONTAL, bomb_num);
+  
+  g_player_info[bomb_num].bomb_info.d_time = -1;
+  g_player_info[bomb_num].bomb_info.pos.x = 0;
+  g_player_info[bomb_num].bomb_info.pos.y = 0;
 }
 
 void DetonateSide(uint8_t horizontal, int bomb_num) {
   uint8_t *current_coord,
-    *end_coord;
+          *end_coord;
   uint8_t bomb_radius;
   struct Position current_pos,
-    end_pos;
+                  end_pos;
   enum Cell *current_cell;
 
-  end_pos = current_pos = g_bomb_info[bomb_num].pos;
+  end_pos = current_pos = g_player_info[bomb_num].bomb_info.pos;
   bomb_radius = g_table.player_stats[bomb_num].length;
 
   current_coord = horizontal ? &current_pos.x : &current_pos.y;
   *current_coord -= bomb_radius;
-  if (*current_coord < 0)
-    *current_coord = 0;
+  if (*current_coord < MIN_COORD)
+    *current_coord = MIN_COORD;
 
   end_coord = horizontal ? &end_pos.x : &end_pos.y;
-  *end_coord += bomb_radius;
-  if (*end_coord >= FIELD_SIZE)
-    *end_coord = FIELD_SIZE;
+  *end_coord += bomb_radius + 1;
+  if (*end_coord >= MAX_COORD)
+    *end_coord = MAX_COORD;
 
   for (*current_coord = *current_coord; *current_coord < *end_coord;
        ++(*current_coord)) {
@@ -278,10 +382,8 @@ void DetonateSide(uint8_t horizontal, int bomb_num) {
     switch (*current_cell) {
       case EMPTY:
         *current_cell = FIRE;
-        g_fire_field.location[current_pos.y][current_pos.x] = FIRE_TIME;
-        break;
       case FIRE:
-        g_fire_field.location[current_pos.y][current_pos.x] = FIRE_TIME;
+        FillFireCell(current_pos, bomb_num);
         break;
       case BOX:
         *current_cell = EMPTY;
@@ -295,16 +397,44 @@ void DetonateSide(uint8_t horizontal, int bomb_num) {
       case PLAYER_2:
       case PLAYER_3:
       case PLAYER_4:
-        KillPlayer((int) *current_cell, bomb_num, current_pos);
+        FillFireCell(current_pos, bomb_num);
+        KillPlayer((int) (*current_cell - PLAYER_1), bomb_num, current_pos);
         break;
       case PLAYER_1_BOMB:
       case PLAYER_2_BOMB:
       case PLAYER_3_BOMB:
       case PLAYER_4_BOMB:
+        FillFireCell(current_pos, bomb_num);
         DetonateBomb(current_pos);
-        KillPlayer((int) *current_cell, bomb_num, current_pos);
+        /* Now *current_cell == FIRE, so we need sub FIRE
+         * instead of PLAYER_1_BOMB. */
+        KillPlayer((int) ((*current_cell) - FIRE), bomb_num, current_pos);
         break;
     }
+  }
+}
+
+void InitializeFireField(void) {
+  int i, j;
+
+  for (i = 0; i < FIELD_SIZE; ++i) {
+    for (j = 0; j < FIELD_SIZE; ++j) {
+      g_fire_field.cell[i][j].time = NO_FIRE;
+    }
+  }
+}
+
+void InitializePlayersInfo(void) {
+  int i;
+  
+  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
+    g_player_info[i].state = INACTIVE;
+    g_player_info[i].pos.x = 0;
+    g_player_info[i].pos.y = 0;
+    g_player_info[i].bomb_info.d_time = 0;
+    g_player_info[i].bomb_info.pos.x = 0;
+    g_player_info[i].bomb_info.pos.y = 0;
+    g_player_info[i].res_time = 0;
   }
 }
 
@@ -312,15 +442,17 @@ void DetonateSide(uint8_t horizontal, int bomb_num) {
 /*                            */
 /* Interface definitions.     */
 /*                            */
-void Update(const struct ActionTable *action_table) {
-  RemoveSuicides(action_table);
-  PlantBombs(action_table);
-  MovePlayers(action_table);
-  Boom();
-  DecreaseRespawn();
+void Update(struct ActionTable *action_table) {
+  AddPlayers(action_table);
+  SuicidePhase(action_table);
+  PlantingPhase(action_table);
+  MovingPhase(action_table);
+  BoomPhase();
+  FirePhase();
+  RespawnPhase();
 }
 
-static void FillField() {
+void FillField(void) {
   enum Cell **field;
   int i, j;
   int to_deletei, to_deletej;
@@ -375,6 +507,12 @@ static void FillField() {
 void SetUp(struct Field **game_field,
            struct StatsTable **stats_table) {
   uint16_t i;
+
+  if (game_field == 0 || stats_table == 0) {
+    perror("SetUp(): Argument pointer is null");
+    return;
+  }
+
   srand(0);
   *game_field = 0;
   *stats_table = 0;
@@ -384,14 +522,14 @@ void SetUp(struct Field **game_field,
    * Second dimention is an linear buffer of enum Cell */
   g_field.location = malloc(sizeof(void *) * FIELD_SIZE);
   if (g_field.location == 0) {
-    perror("Field alloc(1) error");
+    perror("SetUp(): Field alloc(1) error");
     return;
   }
   memset(g_field.location, 0, sizeof(void *) * FIELD_SIZE);
 
   g_field.location[0] = malloc(sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
   if (g_field.location == 0) {
-    perror("Field alloc(2) error");
+    perror("SetUp(): Field alloc(2) error");
     return;
   }
   memset(g_field.location[0], 0, sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
@@ -406,7 +544,6 @@ void SetUp(struct Field **game_field,
 
   /* Init stats table */
   memset(g_table.player_stats, 0, sizeof(struct Dklb) * MAX_PLAYER_AMOUNT);
-
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
     g_table.player_stats[0].bomb = 1;
     g_table.player_stats[0].length = 1;
@@ -414,8 +551,8 @@ void SetUp(struct Field **game_field,
 
   *stats_table = &g_table;
 
-  memset(g_bomb_info, 0, sizeof(g_bomb_info));
-  memset(g_player_pos, 0, sizeof(g_player_pos));
+  InitializeFireField();
+  InitializePlayersInfo();
 }
 
 void TearDown(void) {

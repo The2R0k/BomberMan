@@ -9,11 +9,20 @@
 #include position.h
 #include common.h
 
+enum Doing 
+{
+  NOTHING = 0,
+  BOMB = 1,
+  MOVE_LEFT = 2,
+  MOVE_RIGHT,
+  MOVE_TOP,
+  MOVE_DOWN
+};
+
 struct ClientToServer
 {
   uint8_t id;
-  struct Position bomb;
-  struct Position move;
+  enum Doing doing;
 }__attribute__((__packed__ ));
 
 /*struct to recv message from server*/
