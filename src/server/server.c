@@ -59,13 +59,14 @@ static int get_id()
 static int MakeSocketNonBlocking (int sock)
 {
     int flags, s;
+    int opt_flag = 1;
     flags = fcntl (sock, F_GETFL, DEFAULT);
     if (flags == -1)
     {
         perror ("fcntl");
         return -1;
     }
-
+    
     flags |= O_NONBLOCK;
     s = fcntl (sock, F_SETFL, flags);
     if (s == -1)
@@ -73,6 +74,10 @@ static int MakeSocketNonBlocking (int sock)
         perror ("fcntl");
         return -1;
     }
+
+    
+
+    setsockopt(sock,SOL_SOCKET,SO_REUSEADDR, &opt_flag,sizeof(int));
 
     return DEFAULT;
 }
@@ -177,7 +182,7 @@ static int RunServer()
 
         if(bv>FALSE)
         {
-            SendLog("get message");
+          SendLog("get message");
           printf("%d:%d:%d:%d:%d;",bufer->id,bufer->bomb.x,bufer->bomb.y,bufer->move.x,bufer->move.y);
           printf("\n");
             
@@ -220,7 +225,6 @@ static int RunServer()
                     if(!playerInfo[i+1].status)
                     {
                         new_player_flaq = i+1;
-                //        playerInfo[i+1].status = TRUE;
                         SendLog("we are have a new player");
                         break;
                     }
@@ -236,24 +240,41 @@ static int RunServer()
                 printf("new_player_flaq is :: %d",new_player_flaq);
                 for(i=DEFAULT;i<CONNECT_TRY_MAX;++i)
                 {
-                    sleep(1);
                     SendLog("try connecting to client");
                     bv = connect(playerInfo[new_player_flaq].sock_tcp,
                         (struct sockaddr*)&(playerInfo[new_player_flaq].from),
                         from_len);
                     perror("connecting::");
-                    if(bv > FALSE)
+                    if(bv == DEFAULT)
                     {
                         SendLog("Connected");
+                        playerInfo[i+1].status = TRUE;
+/*  testing 
+ *  must have ServerToClient structure 
+ *  and another data 
+ */
+
+                        msg->id = new_player_flaq;
+                        msg->bomb.x = DEFAULT;
+                        msg->bomb.y = DEFAULT;
+                        msg->move.x = DEFAULT;
+                        msg->move.y = DEFAULT;
+                        bv = send(playerInfo[new_player_flaq].sock_tcp,msg,
+                                    sizeof(struct ClientToServer),DEFAULT);
+                        printf("now BV is :: %d \n",bv);
+                        if(bv)
+                        {
+                            SendLog("sending complite sucefull");
+                            break;
+                        }
                     }
                     if(i==CONNECT_TRY_MAX -1)
                     {
                         
                         SendLog("Connecting filed: unknown");
                     }
-                    
+                    sleep(1);                    
                 }
-                
             }
 /*           {
  *               from_len = sizeof(struct sockaddr_in);
