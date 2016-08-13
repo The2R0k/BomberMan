@@ -90,9 +90,9 @@ static void FillFireCell(struct Position pos, int player_num);
 
 static void DisconnectPlayer(int player_num);
 
-static int CanPlant(int player_num, struct Position bomb_pos);
+static int CanPlant(int player_num);
 
-static void PlantBomb(uint8_t player_num, struct Position pos);
+static void PlantBomb(uint8_t player_num);
 
 static int CanMove(int player_num, struct Position next_pos);
 
@@ -166,16 +166,20 @@ void SuicidePhase(const struct ActionTable *action_table) {
   }
 }
 
-int CanPlant(int player_num, struct Position bomb_pos) { 
+int CanPlant(int player_num) { 
+  struct Position bomb_pos   = g_player_info[player_num].bomb_info.pos;
+  struct Position player_pos = g_player_info[player_num].pos;
+  
   uint8_t has_bomb = g_table.player_stats[player_num].bomb;
-  uint8_t is_player_on_bomb = 
-        g_player_info[player_num].bomb_info.pos.x == bomb_pos.x &&
-        g_player_info[player_num].bomb_info.pos.y == bomb_pos.y;
+  uint8_t is_player_on_bomb = bomb_pos.x == player_pos.x &&
+                              bomb_pos.y == player_pos.y;
   
   return (!is_player_on_bomb && has_bomb);
 }
 
-void PlantBomb(uint8_t player_num, struct Position pos) {
+void PlantBomb(uint8_t player_num) {
+  struct Position pos = g_player_info[player_num].bomb_info.pos;
+
   g_field.location[pos.y][pos.x] = PLAYER_1_BOMB + player_num;
   
   g_player_info[player_num].bomb_info.pos = pos;
@@ -186,15 +190,15 @@ void PlantBomb(uint8_t player_num, struct Position pos) {
 
 void PlantingPhase(struct ActionTable *action_table) {
   int i;
-  struct Position bomb_pos;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    if (g_player_info[i].state != ALIVE) {
+    if (g_player_info[i].state != ALIVE ||
+        !action_table->player_info[i].bomb) {
       continue;
     }
     
-    if (CanPlant(i, action_table->player_info[i].bomb_pos)) {
-      PlantBomb(i, action_table->player_info[i].bomb_pos);
+    if (CanPlant(i)) {
+      PlantBomb(i);
       action_table->player_info[i].move_pos.x = 0;
       action_table->player_info[i].move_pos.y = 0;
     }
@@ -479,6 +483,7 @@ void InitializePlayersInfo(void) {
 /* Interface definitions.     */
 /*                            */
 void Update(struct ActionTable *action_table) {
+  ConvertActionTable(action_table);
   AddPlayers(action_table);
   SuicidePhase(action_table);
   PlantingPhase(action_table);
