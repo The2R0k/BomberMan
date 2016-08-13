@@ -15,8 +15,8 @@
 void SetUp(struct Field **game_field,
            struct StatsTable **stats_table);
 
-/** \brief Update the game filed and statistics.
- *  \param [in] action_table Table contains players actions.
+/** \brief Update the game field and statistics table.
+ *  \param [in] action_table Table that contains players actions.
  *  
  *  Function updates game field and statistics table rely on
  *  players actions that contain in action table.
