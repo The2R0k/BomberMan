@@ -24,6 +24,8 @@
 #define MIN_COORD 1
 #define MAX_COORD 18
 
+#define MAX_LENGTH 8
+
 /*============================*/
 /*                            */
 /* Global variables.          */
@@ -317,7 +319,7 @@ void KillPlayer(int victim_num, int killer_num,
   if (victim_num != killer_num) {
     /* Suicide is not murder! */
     ++g_table.player_stats[killer_num].score;
-    if (g_table.player_stats[killer_num].length > FIELD_SIZE)
+    if (g_table.player_stats[killer_num].length <= MAX_LENGTH)
       ++g_table.player_stats[killer_num].length;
   }
 
@@ -326,6 +328,7 @@ void KillPlayer(int victim_num, int killer_num,
   g_player_info[victim_num].res_time = RESPAWN_TIME;
   g_player_info[victim_num].pos.x = 0;
   g_player_info[victim_num].pos.y = 0;
+  g_table.player_stats[victim_num].bomb = 0;
 }
 
 void DetonateBomb(struct Position bomb_pos) {
@@ -339,6 +342,13 @@ void DetonateBomb(struct Position bomb_pos) {
     }
   }
 
+  g_table.player_stats[bomb_num].bomb = 1;
+  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
+    if (g_field.location[bomb_pos.y][bomb_pos.x] == (PLAYER_1_BOMB + i)) {
+      /* Suicide. */
+      KillPlayer(i, i, bomb_pos);
+    }
+  }
   g_field.location[bomb_pos.y][bomb_pos.x] = FIRE;
   DetonateSide(VERTICAL, bomb_num);
   DetonateSide(HORIZONTAL, bomb_num);
@@ -365,7 +375,7 @@ void DetonateSide(uint8_t horizontal, int bomb_num) {
     *current_coord = MIN_COORD;
 
   end_coord = horizontal ? &end_pos.x : &end_pos.y;
-  *end_coord += bomb_radius;
+  *end_coord += bomb_radius + 1;
   if (*end_coord >= MAX_COORD)
     *end_coord = MAX_COORD;
 
@@ -401,7 +411,9 @@ void DetonateSide(uint8_t horizontal, int bomb_num) {
       case PLAYER_4_BOMB:
         FillFireCell(current_pos, bomb_num);
         DetonateBomb(current_pos);
-        KillPlayer((int) (*current_cell - PLAYER_1), bomb_num, current_pos);
+        /* Now *current_cell == FIRE, so we need sub FIRE
+         * instead of PLAYER_1_BOMB. */
+        KillPlayer((int) ((*current_cell) - FIRE), bomb_num, current_pos);
         break;
     }
   }
