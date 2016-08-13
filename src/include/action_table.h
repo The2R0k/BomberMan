@@ -13,7 +13,7 @@
 /**/
 struct ActionCell {
   uint8_t suicide;
-  struct Position bomb_pos;
+  uint8_t bomb;
   struct Position move_pos;
 }__attribute__((__packed__ ));
 
