@@ -7,7 +7,8 @@
 struct PlayerInfo {
   enum PlayerState state;
   struct BombInfo bomb_info;
-  struct Position pos; /* Current player pos. */
+  struct Position pos;  /* Current player pos. */
+  uint8_t suicide_time; /* No answer count. */
   uint8_t res_time;
 };
 

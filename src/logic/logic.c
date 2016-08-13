@@ -14,6 +14,7 @@
 #define NO_FIRE -1
 #define FIRE_TIME 4
 #define DETONATION_TIME 3
+#define DISCONNECT_TIME 6
 
 #define RESPAWN_TIME 11
 
@@ -72,6 +73,8 @@ static void RespawnPhase(void);
 
 
 
+static void DisconnectPlayer(int player_num);
+
 static int CanPlant(int player_num, struct Position bomb_pos);
 
 static void PlantBomb(uint8_t player_num, struct Position pos);
@@ -113,27 +116,15 @@ void AddPlayers(const struct ActionTable *action_table) {
 
 void SuicidePhase(const struct ActionTable *action_table) {
   int i;
-  struct Position *pos = NULL;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
     if (action_table->player_info[i].suicide) {
-      pos = &g_player_info[i].pos;
-      
-      g_player_info[i].state = INACTIVE;
-      
-      g_field.location[pos->y][pos->x] = EMPTY;
-
-      g_table.player_stats[i].score = 0;
-      g_table.player_stats[i].length = 0;
-      g_table.player_stats[i].death = 0;
-      g_table.player_stats[i].bomb = 0;
-
-      g_player_info[i].pos.x = 0;
-      g_player_info[i].pos.y = 0;
-
-      g_player_info[i].bomb_info.d_time = -1;
-      g_player_info[i].bomb_info.pos.x = 0;
-      g_player_info[i].bomb_info.pos.y = 0;
+      ++g_player_info[i].suicide_time;
+      if (g_player_info[i].suicide_time == DISCONNECT_TIME) {
+        DisconnectPlayer(i);
+      }
+    } else {
+      g_player_info[i].suicide_time = 0;
     }
   }
 }
@@ -169,6 +160,26 @@ void PlantingPhase(struct ActionTable *action_table) {
       action_table->player_info[i].move_pos.y = 0;
     }
   }
+}
+
+void DisconnectPlayer(int player_num) {
+  struct Position *pos = &g_player_info[player_num].pos;
+        
+  g_field.location[pos->y][pos->x] = EMPTY;
+  
+  g_player_info[player_num].state = INACTIVE;
+  g_player_info[player_num].pos.x = 0;
+  g_player_info[player_num].pos.y = 0;
+  g_player_info[player_num].suicide_time = 0;
+  g_player_info[player_num].bomb_info.d_time = -1;
+  g_player_info[player_num].bomb_info.pos.x = 0;
+  g_player_info[player_num].bomb_info.pos.y = 0;
+  g_player_info[player_num].res_time = 0;
+  
+  g_table.player_stats[player_num].score = 0;
+  g_table.player_stats[player_num].length = 0;
+  g_table.player_stats[player_num].death = 0;
+  g_table.player_stats[player_num].bomb = 0; 
 }
 
 int CanMove(int player_num, struct Position next_pos) {
@@ -246,6 +257,7 @@ void RespawnPlayer(int player_num) {
   g_player_info[player_num].state = ALIVE;
   g_player_info[player_num].pos.x = i;
   g_player_info[player_num].pos.y = j;
+  g_player_info[player_num].suicide_time = 0;
   g_table.player_stats[player_num].bomb = 1;
   g_table.player_stats[player_num].length = 1;
 }
