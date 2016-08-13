@@ -73,6 +73,8 @@ static void RespawnPhase(void);
 
 
 
+static void FillFireCell(struct Position pos, int player_num);
+
 static void DisconnectPlayer(int player_num);
 
 static int CanPlant(int player_num, struct Position bomb_pos);
@@ -164,6 +166,11 @@ void PlantingPhase(struct ActionTable *action_table) {
   }
 }
 
+void FillFireCell(struct Position pos, int player_num) {
+  g_fire_field.cell[pos.y][pos.x].time = FIRE_TIME;
+  g_fire_field.cell[pos.y][pos.x].player_num = player_num;
+}
+
 void DisconnectPlayer(int player_num) {
   struct Position *pos = &g_player_info[player_num].pos;
         
@@ -209,14 +216,15 @@ void MovePlayer(int player_num, struct Position next_pos) {
       *player_cell = EMPTY;
     }
   }
-  if (g_fire_field.f_time[next_pos.y][next_pos.x] == NO_FIRE) {
+  if (g_fire_field.cell[next_pos.y][next_pos.x].time == NO_FIRE) {
     g_field.location[next_pos.y][next_pos.x] = (enum Cell)(PLAYER_1 +
                                                            player_num);
     *prev_pos = next_pos;
   }
   else {
-    /* TODO: kill player.
-     * KillPlayer(); */
+    KillPlayer(player_num,
+               g_fire_field.cell[next_pos.y][next_pos.x].player_num,
+               next_pos);
   }
 }
 
@@ -270,13 +278,13 @@ void FirePhase(void) {
 
   for (i = 0; i < FIELD_SIZE; ++i) {
     for (j = 0; j < FIELD_SIZE; ++j) {
-      if (g_fire_field.f_time[i][j] > 0) {
+      if (g_fire_field.cell[i][j].time > 0) {
         /* Decrease fire time. */
-        --g_fire_field.f_time[i][j];
-        if (g_fire_field.f_time[i][j] == 0) {
+        --g_fire_field.cell[i][j].time;
+        if (g_fire_field.cell[i][j].time == 0) {
           /* Remove fire from game field. */
           g_field.location[i][j] = EMPTY;
-          g_fire_field.f_time[i][j] = NO_FIRE;
+          g_fire_field.cell[i][j].time = NO_FIRE;
         }
       } 
     }
@@ -314,7 +322,6 @@ void KillPlayer(int victim_num, int killer_num,
   }
 
   g_field.location[murder_pos.y][murder_pos.x] = FIRE;
-  g_fire_field.f_time[murder_pos.y][murder_pos.x] = FIRE_TIME;
   g_player_info[victim_num].state = DEAD;
   g_player_info[victim_num].res_time = RESPAWN_TIME;
   g_player_info[victim_num].pos.x = 0;
@@ -368,10 +375,10 @@ void DetonateSide(uint8_t horizontal, int bomb_num) {
     switch (*current_cell) {
       case EMPTY:
         *current_cell = FIRE;
-        /* TEST: g_fire_field.f_time[current_pos.y][current_pos.x] = FIRE_TIME;
+        /* TEST: g_fire_field.time[current_pos.y][current_pos.x] = FIRE_TIME;
         break; */
       case FIRE:
-        g_fire_field.f_time[current_pos.y][current_pos.x] = FIRE_TIME;
+        FillFireCell(current_pos, bomb_num);
         break;
       case BOX:
         *current_cell = EMPTY;
@@ -385,12 +392,14 @@ void DetonateSide(uint8_t horizontal, int bomb_num) {
       case PLAYER_2:
       case PLAYER_3:
       case PLAYER_4:
+        FillFireCell(current_pos, bomb_num);
         KillPlayer((int) (*current_cell - PLAYER_1), bomb_num, current_pos);
         break;
       case PLAYER_1_BOMB:
       case PLAYER_2_BOMB:
       case PLAYER_3_BOMB:
       case PLAYER_4_BOMB:
+        FillFireCell(current_pos, bomb_num);
         DetonateBomb(current_pos);
         KillPlayer((int) (*current_cell - PLAYER_1), bomb_num, current_pos);
         break;
@@ -403,7 +412,7 @@ void InitializeFireField(void) {
 
   for (i = 0; i < FIELD_SIZE; ++i) {
     for (j = 0; j < FIELD_SIZE; ++j) {
-      g_fire_field.f_time[i][j] = NO_FIRE;
+      g_fire_field.cell[i][j].time = NO_FIRE;
     }
   }
 }
