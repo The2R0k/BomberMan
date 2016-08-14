@@ -1,7 +1,10 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
+#include <stdint.h>
+
 #define MAX_PLAYER_AMOUNT 4
+#define FIELD_SIZE        19
 
 /*  Enum to represent a cell of game field. */
 enum Cell {
@@ -27,7 +30,7 @@ struct Field {
 /*  Death, kill, length counters & bomb flag (have or not). */
 struct Dklb {
   uint8_t score;  /*  How more players was killed. */
-  uint8_t lenght; /*  Length of fire. Increment if player kills someone
+  uint8_t length; /*  Length of fire. Increment if player kills someone
                       and drops if player die. */
   uint8_t death;  /*  How many death. */
   uint8_t bomb;   /*  1 if player has a bomb and 0 if hasn't. */
