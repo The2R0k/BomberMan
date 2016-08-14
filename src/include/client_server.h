@@ -31,7 +31,6 @@ enum Doing {
   if server not full, server send new id
   next time, must sending with that i
 */
-
 struct ClientToServer {
   uint8_t id;
   enum Doing doing;
