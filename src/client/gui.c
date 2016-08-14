@@ -1,9 +1,37 @@
 #include "gui.h"
 
+/* Func getline needs. */
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <stdint.h>
+
 #include "network.h"
 
-#include <stdio.h>
+/*============================*/
+/*                            */
+/* Helpfull functions.        */
+/*                            */
+static int8_t IsAddressValid(char *ip_address);
 
+static void PrintGreetings(void);
+
+static void PrintMenu(void);
+
+static void StartNewGame(void);
+
+static void StartGameCircle(void);
+
+static void TryConnect(void);
+
+/*============================*/
+/*                            */
+/* Definitions.               */
+/*                            */
 int8_t IsAddressValid(char *ip_address) {
   struct sockaddr_in sa;
   int result = inet_pton(AF_INET, ip_address, &(sa.sin_addr));
@@ -24,22 +52,16 @@ void PrintMenu(void) {
 
 void StartNewGame(void) {
   if (fork() == 0) {
-    execlp("./server", NULL);
+    execlp("./server", "server", NULL);
   } else { 
     Connect("127.0.0.1"); /* TEST: */
   }
 }
 
-int8_t Connect(char *ip_address) {  
-  printf("Init udp\n");
-  InitUDP(ip_address);
-  printf("Registration\n");
-  Registration();
-  printf("Init tcp\n");
-  InitTCP(ip_address);
-  printf("Done\n");
-  
-  return 1;
+void StartGameCircle(void) {
+  while (1) {
+    
+  }
 }
 
 void TryConnect(void) {
@@ -84,11 +106,12 @@ void TryConnect(void) {
     free(ip_address);
     ip_address = NULL;
     count = 0;
-  } 
+  }
+  StartGameCircle();
 }
 
-void ShowStartingMenu(void) {
-  char c, b_sym;
+void Run(void) {
+  char c;
   int8_t need_exit = 0;
  
   close(STDERR_FILENO); 
@@ -96,7 +119,7 @@ void ShowStartingMenu(void) {
   while (!need_exit) {
     PrintMenu();
     c = getchar();
-    b_sym = getchar(); /* Break symbol. */
+    getchar(); /* Break symbol. */
     if ('0' <= c && c <= '2') {
       need_exit = 1;
     }
