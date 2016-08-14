@@ -1,12 +1,9 @@
-#include "network.h"
+#include "gui.h"
 
-int main(int argc, char *argv[]) {
-  if (argc < 3) {
-    printf("Incorrect input ! \nExample: %s 192.168.0.2 4444\n", argv[0]);
-    exit(-1);
-  }
+int main(void) {
+  ShowStartingMenu();  
 
-  // /*msg send to server*/
+  /*msg send to server*/
   // struct ClientToServer *sendMsg;
   // sendMsg = (struct ClientToServer *)malloc(CLIENT_MSG_SIZE);
   // /*msg get from server*/

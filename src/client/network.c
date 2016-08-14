@@ -9,8 +9,8 @@ static int state;
 
 void InitUDP(char const *argv[]) {
 
-  if ((udp_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-    perror("socket()");
+  if ((udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+    perror("socket() error");
     exit(-1);
   }
 
@@ -44,13 +44,15 @@ void InitTCP() {
   client_addr.sin_addr.s_addr = inet_addr(address);
   client_addr.sin_port = htons(PORT);
 
-  if (setsockopt(tcp_sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &on, sizeof(on)) < 0) {
+  if (setsockopt(tcp_sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &on,
+                 sizeof(on)) < 0) {
     perror("setsockopt()");
     close(tcp_sock);
     exit(-1);
   }
 
-  if (bind(tcp_sock, (struct sockaddr *) &client_addr, sizeof(client_addr)) < 0) {
+  if (bind(tcp_sock, (struct sockaddr *) &client_addr,
+           sizeof(client_addr)) < 0) {
     perror("bind()");
     close(tcp_sock);
     exit(-1);
@@ -63,7 +65,8 @@ void InitTCP() {
   }
 
   server_len = sizeof(server_addr);
-  if((client_sock = accept(tcp_sock, (struct sockaddr*)&server_addr, &server_len)) < 0) {
+  if((client_sock = accept(tcp_sock, (struct sockaddr*)&server_addr,
+                           &server_len)) < 0) {
     perror("accept()");
     exit(-1);
   }
@@ -75,16 +78,14 @@ void ShutdownNetwork() {
 }
 
 void Registration(struct ClientToServer *msg) {
-  int bytes = 0;
-
   msg->id = 0;
   msg->bomb.x = 0;
   msg->bomb.y = 0;
   msg->move.x = 0;
   msg->move.y = 0;
 
-  if ((bytes = sendto(udp_sock, msg, CLIENT_MSG_SIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0)) {
-    printf("BYTES = %d\n", bytes);
+  if (sendto(udp_sock, msg, CLIENT_MSG_SIZE, 0, (struct sockaddr *)
+                      &server_addr, sizeof(server_addr)) < 0) {
     perror("send()");
     close(udp_sock);
     exit(-1);
@@ -92,7 +93,8 @@ void Registration(struct ClientToServer *msg) {
 }
 
 void SendMsg(struct ClientToServer *msg) {
-  if (sendto(udp_sock, msg, CLIENT_MSG_SIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+  if (sendto(udp_sock, msg, CLIENT_MSG_SIZE, 0, (struct sockaddr *)
+             &server_addr, sizeof(server_addr)) < 0) {
     perror("send()");
     close(udp_sock);
     exit(-1);
