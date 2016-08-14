@@ -28,7 +28,7 @@
 #define PORT 9999
 
 /*init and shutdown network*/
-void InitUDP(char const *argv[]);
+void InitUDP(char *server_ip);
 void OnitTCP();
 void ShutdownNetwork();
 /*send position info...

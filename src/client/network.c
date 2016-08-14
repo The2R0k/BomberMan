@@ -1,5 +1,8 @@
 #include "network.h"
 
+#define SERVER_PORT 4444
+#define CLIENT_PORT 9999
+
 /* Global variables */
 static int tcp_sock, udp_sock, client_sock;
 static char tmp;
@@ -7,8 +10,7 @@ static char *address;
 static struct sockaddr_in client_addr, server_addr;
 static int state;
 
-void InitUDP(char const *argv[]) {
-
+void InitUDP(char *server_ip) {
   if ((udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
     perror("socket() error");
     exit(-1);
@@ -16,8 +18,8 @@ void InitUDP(char const *argv[]) {
 
   bzero(&server_addr, sizeof(server_addr));
   server_addr.sin_family = AF_INET;
-  server_addr.sin_addr.s_addr = inet_addr(argv[1]);
-  server_addr.sin_port = htons(atoi(argv[2]));
+  server_addr.sin_addr.s_addr = inet_addr(server_ip);
+  server_addr.sin_port = htons(CLIENT_PORT);
 }
 
 void InitTCP() {
@@ -46,20 +48,20 @@ void InitTCP() {
 
   if (setsockopt(tcp_sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &on,
                  sizeof(on)) < 0) {
-    perror("setsockopt()");
+    perror("setsockopt() error");
     close(tcp_sock);
     exit(-1);
   }
 
   if (bind(tcp_sock, (struct sockaddr *) &client_addr,
            sizeof(client_addr)) < 0) {
-    perror("bind()");
+    perror("bind() error");
     close(tcp_sock);
     exit(-1);
   }
 
   if (listen(tcp_sock, 1) < 0) {
-    perror("listen()");
+    perror("listen() error");
     close(tcp_sock);
     exit(-1);
   }
@@ -67,7 +69,7 @@ void InitTCP() {
   server_len = sizeof(server_addr);
   if((client_sock = accept(tcp_sock, (struct sockaddr*)&server_addr,
                            &server_len)) < 0) {
-    perror("accept()");
+    perror("accept() error");
     exit(-1);
   }
 }
