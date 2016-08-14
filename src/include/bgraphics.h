@@ -22,7 +22,6 @@ void CleanGraph(struct GraphSources *); // Cleainig up all the graphics
 void PrintNums(int, int, struct GraphSources *); // Prints values of DKLB. 1st arg - num to print, second arg - y position;
 
 /* graphics constants */
-#define FIELDSIZE 19 // field size
 #define PCSIZE 34 // bitmap block size
 
 #endif /* _BGRAPHICS_H_ */

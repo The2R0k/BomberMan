@@ -20,17 +20,17 @@ enum GameState {
 
 /* Creating the devides of field */
 void UpdateMatrix(enum Cell **matrix) {
-  for (int i = 0; i < FIELDSIZE; i++) {
+  for (int i = 0; i < FIELD_SIZE; i++) {
     matrix[0][i] = 6; 
     matrix[i][0] = 6;
-    matrix[FIELDSIZE - 1][i] = 6;
-    matrix[i][FIELDSIZE - 1] = 6;
+    matrix[FIELD_SIZE - 1][i] = 6;
+    matrix[i][FIELD_SIZE - 1] = 6;
   }
 }
 /* Random generation */
 void FillMatrix(enum Cell **matrix) {
-  for (int i = 1; i < FIELDSIZE - 1; i++) {
-    for(int j = 1; j < FIELDSIZE - 1; j++) {  
+  for (int i = 1; i < FIELD_SIZE - 1; i++) {
+    for(int j = 1; j < FIELD_SIZE - 1; j++) {  
       int n = rand() % 62;
       if (n > 60)
         matrix[i][j] = 5;   
@@ -39,8 +39,8 @@ void FillMatrix(enum Cell **matrix) {
 }
 /* prints map to console */
 void PrintGraphics(enum Cell **matrix) {
-  for (int i = 0; i < FIELDSIZE; i++) {
-    for (int j = 0; j < FIELDSIZE; j++) {
+  for (int i = 0; i < FIELD_SIZE; i++) {
+    for (int j = 0; j < FIELD_SIZE; j++) {
       if (matrix[i][j] == EMPTY)
         printf("  ");
       else if (matrix[i][j] == BOX)
@@ -72,10 +72,10 @@ int main(int argc, char const *argv[]) {
   GraphicsInit(gs); // initializing graphics
 
 /* # initializing field # */
-  field_loc.location = malloc(sizeof(enum Cell *) * FIELDSIZE);
-  for (int i = 0; i < FIELDSIZE; i++) {
-    field_loc.location[i] = malloc(sizeof(enum Cell) * FIELDSIZE);
-    for (int j = 0; j < FIELDSIZE; j++) {
+  field_loc.location = malloc(sizeof(enum Cell *) * FIELD_SIZE);
+  for (int i = 0; i < FIELD_SIZE; i++) {
+    field_loc.location[i] = malloc(sizeof(enum Cell) * FIELD_SIZE);
+    for (int j = 0; j < FIELD_SIZE; j++) {
       field_loc.location[i][j] = 0;
     }
   }

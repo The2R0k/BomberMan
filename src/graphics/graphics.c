@@ -385,8 +385,8 @@ void PrintNums(int num, int y, struct GraphSources *gs) {
 /* Refreshing current game state*/
 void RefreshState(struct Field field_loc, struct Dklb dklb_loc, struct GraphSources *gs) {
 /* # Generating final image # */
-  for (int i = 0; i < FIELDSIZE; i++) {
-    for (int j = 0; j < FIELDSIZE; j++) {
+  for (int i = 0; i < FIELD_SIZE; i++) {
+    for (int j = 0; j < FIELD_SIZE; j++) {
       if (field_loc.location[i][j] == WALL)
         ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->wall, gs->ren);
       else if (field_loc.location[i][j] == BOX)
