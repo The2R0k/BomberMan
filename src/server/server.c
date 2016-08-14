@@ -91,9 +91,9 @@ static void ActionTableClear(struct ActionTable *action_table){
   int i=DEFAULT;
   for(;i<MAX_PLAYERS;++i){
     action_table->player_info[i].suicide = DEFAULT;
-    action_table->player_info[i].plant_bomb = DEFAULT;
-    action_table->player_info[i].move.x = DEFAULT;
-    action_table->player_info[i].move.y = DEFAULT;
+    action_table->player_info[i].bomb = DEFAULT;
+    action_table->player_info[i].move_pos.x = DEFAULT;
+    action_table->player_info[i].move_pos.y = DEFAULT;
   }  
 }
 
@@ -208,23 +208,23 @@ static int RunServer()
                     case NOTHING:
                         break;
                     case PLANT_BOMB:
-                        action_table.player_info[bufer->id].plant_bomb = TRUE;
+                        action_table.player_info[bufer->id].bomb = TRUE;
                         break;
                     case MOVE_LEFT:
-                        action_table.player_info[bufer->id].move.x = -1;
-                        action_table.player_info[bufer->id].move.y = 0;
+                        action_table.player_info[bufer->id].move_pos.x = -1;
+                        action_table.player_info[bufer->id].move_pos.y = 0;
                         break;
                     case MOVE_RIGHT:
-                        action_table.player_info[bufer->id].move.x = 1;
-                        action_table.player_info[bufer->id].move.y = 0;
+                        action_table.player_info[bufer->id].move_pos.x = 1;
+                        action_table.player_info[bufer->id].move_pos.y = 0;
                         break;
                     case MOVE_TOP:
-                        action_table.player_info[bufer->id].move.x = 0;
-                        action_table.player_info[bufer->id].move.y = -1;
+                        action_table.player_info[bufer->id].move_pos.x = 0;
+                        action_table.player_info[bufer->id].move_pos.y = -1;
                         break;
                     case MOVE_DOWN:
-                        action_table.player_info[bufer->id].move.x = 0;
-                        action_table.player_info[bufer->id].move.y = 1;
+                        action_table.player_info[bufer->id].move_pos.x = 0;
+                        action_table.player_info[bufer->id].move_pos.y = 1;
                         break;
                     default:
                         SendLog("i don't know what client won't");
@@ -315,7 +315,7 @@ static int RunServer()
             }
           }
         }
-      printf("i'm work:%d\n",i);
+//      printf("i'm work:%d\n",i);
       i++;
     }
 }

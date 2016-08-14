@@ -13,8 +13,8 @@
 
 struct ActionCell {
   uint8_t suicide;
-  uint8_t plant_bomb;
-  struct Position move;
+  uint8_t bomb;
+  struct Position move_pos;
 }__attribute__((__packed__ ));
 
 /* Structure that client send to server. */

@@ -28,24 +28,27 @@ enum Doing {
 };
 
 /**
-  \brief This struct should be sent to server from client.
-*/
-struct ClientToServer
-{
-  uint8_t id;
-  enum Doing doing;
-} __attribute__((packed));
-
-/**
   \briefStruct to recv message from server.
 
   First time sending new id, and new field.
 */
+/* Struct for send udp message to server
+ * first time sending: id=0, bomb={0;0}, move={0;0}.
+ * If server is not full, server send new id
+ * next time, must sending with that id.
+ */
+ struct ClientToServer {
+  uint8_t id;
+  enum Doing doing;
+} __attribute__((packed));
+
+/* Struct to recv message from server.
+ * First time sending new id and new field.
+ */
 struct ServerToClient {
   uint8_t id;
   struct Field field;
   struct Dklb stats;
 } __attribute__((packed));
 
-
-#endif
+#endif /* _CLIENT_SERVER_H_ */
