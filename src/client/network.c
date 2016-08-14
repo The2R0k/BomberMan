@@ -56,7 +56,12 @@ static void ShutdownNetwork(void);
 */
 static void Registration(void);
 
-static void SendMsg(struct ClientToServer *msg);
+/**
+  \brief Send message msg to server.
+  \param msg Pointer to existing ClientToServer message.
+  \return 1 on success, 0 otherwise.
+*/
+static int8_t SendMsg(struct ClientToServer *msg);
 
 static struct ServerToClient RecvMsg(void);
 
@@ -123,40 +128,25 @@ void ShutdownNetwork(void) {
   close(udp_sock);
 }
 
-int8_t Connect(char *server_ip) {
-  struct ServerToClient msg_with_id;
-  
-  player_id = 0;
-
-  printf("Init udp\n");
-  InitUDP(server_ip);
-  printf("Registration\n");
-  Registration();
-  printf("Init tcp\n");
-  InitTCP();
-  printf("Done tcp connection\n");
-
-  msg_with_id = RecvMsg();
-  player_id = msg_with_id.id;
-   
-  return 1; 
-}
-
 void Registration(void) {
   struct ClientToServer msg;
 
   msg.id = 0;
   msg.doing = NOTHING;
-  SendMsg(&msg); 
+  if (!SendMsg(&msg)) {
+    /* TODO: add error handling. Server may be unreachable. */
+  }
 }
 
-void SendMsg(struct ClientToServer *msg) {
+int8_t SendMsg(struct ClientToServer *msg) {
   if (sendto(udp_sock, msg, CLIENT_MSG_SIZE, 0, (struct sockaddr *)
              &server_addr, sizeof(server_addr)) < 0) {
+    /* TODO: add net errors such as disconnect. */
     perror("send()");
     close(udp_sock);
-    exit(-1);
+    return 0;
   }
+  return 1;
 }
 
 struct ServerToClient RecvMsg(void) {
@@ -170,4 +160,36 @@ struct ServerToClient RecvMsg(void) {
   }
 
   return msg;
+}
+
+/*============================*/
+/*                            */
+/* Interface definition.      */
+/*                            */
+int8_t Connect(char *server_ip) {
+  struct ServerToClient msg_with_id;
+  
+  player_id = 0;
+
+  InitUDP(server_ip);
+  Registration();
+  InitTCP();
+
+  msg_with_id = RecvMsg();
+  player_id = msg_with_id.id;
+   
+  return 1; 
+}
+
+int8_t HandleAction(enum Doing action) {
+  struct ClientToServer msg;
+
+  msg.id = player_id;
+  msg.doing = action;
+
+  if (!SendMsg(&msg)) {
+    perror("HandleAction() error");
+    return 0;
+  }
+  return 1;
 }

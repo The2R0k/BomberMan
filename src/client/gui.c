@@ -59,9 +59,65 @@ void StartNewGame(void) {
 }
 
 void StartGameCircle(void) {
-  while (1) {
-    
+  if (fork() == 0) {
+    char key;
+    enum Doing action;
+    /* Keyboard process. */
+    while (1) {
+      key = getchar();
+      switch (key) {
+        case '\n':
+        case ' ':
+          action = PLANT_BOMB;
+          break;
+        case 27:
+          getchar();
+          key = getchar(); 
+          /* TODO: change to if and +. */
+          switch (key) {
+            case 'A':  /* Top arrow. */
+              action = MOVE_TOP;
+              break;
+            case 'B':  /* Down arrow. */
+              action = MOVE_DOWN;
+              break;
+            case 'C':  /* Right arrow. */
+              action = MOVE_RIGHT;
+              break;
+            case 'D':  /* Left arrow. */
+              action = MOVE_LEFT;
+              break;
+            default:
+              action = NOTHING;
+              break;
+          }
+          break;
+        default:
+          action = NOTHING;
+          break;
+      }
+
+      if (!HandleAction(action)) {
+        /* TODO: handle error. */
+      }
+    }
+    exit(0);
   }
+  /* TODO: run graphics.
+   * It should be such as:
+   *
+   * struct GameInfo game_info;
+   *
+   * InitializeGraphics();
+   * while (1) {
+   *   game_info = GetNewState();
+   *   GameUpdate(&game_info);
+   *   
+   *   Note: we don't need sleep, 'cause GetNewState() is blocking operation,
+   *   which calls RecvMsg from server inside.
+   *   TODO: think how end the game.
+   * }
+   */
 }
 
 void TryConnect(void) {
