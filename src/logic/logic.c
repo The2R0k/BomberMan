@@ -1,3 +1,8 @@
+/**
+  \file
+  \brief File contains implementation logic-module interface.
+*/
+
 #include "logic.h"
 
 #include <stdlib.h>
@@ -38,37 +43,50 @@ static struct PlayerInfo g_player_info[MAX_PLAYER_AMOUNT];
 /*                            */
 
 /* Interface. */
-/** \brief Add new player in game.
- *  \param [in] action_table Table is sent from server module.
- * */
+/**
+  \brief Convert move pos in action table from delta to absolute values.
+  \param [in,out] action_table Table is sent from server_module.
+*/
+static void ConvertActionTable(struct ActionTable *action_table);
+/**
+  \brief Add new player in game.
+  \param [in] action_table Table is sent from server module.
+*/
 static void AddPlayers(const struct ActionTable *action_table);
 
-/** \brief Remove all players that has been disconected.
- *  \param [in] action_table Table is sent from server module.
- * */
+/**
+  \brief Remove all players that has been disconected.
+  \param [in] action_table Table is sent from server module.
+*/
 static void SuicidePhase(const struct ActionTable *action_table);
 
-/** \brief Plant bombs.
- *  \param [in] action_table Table is sent from server module.
- * */
+/**
+  \brief Plant bombs.
+  \param [in,out] action_table Table is sent from server module.
+*/
 static void PlantingPhase(struct ActionTable *action_table);
 
-/** \brief Make all players' movements.
- *  \param [in] action_table Table is sent from server module.
- * */
+/**
+  \brief Make all players' movements.
+  \param [in] action_table Table is sent from server module.
+*/
 static void MovingPhase(const struct ActionTable *action_table);
 
-/** \brief Detoante all bombs.
- * */
+/**
+  \brief Detoante all bombs.
+*/
 static void BoomPhase(void);
 
-/** \brief Decrease fire time. 
- * */
+/**
+  \brief Decrease fire time. 
+*/
 static void FirePhase(void);
 
-/** \brief Respawn players that need it.
- * */
+/**
+  \brief Respawn players that need it.
+*/
 static void RespawnPhase(void);
+
 
 
 
@@ -76,9 +94,9 @@ static void FillFireCell(struct Position pos, int player_num);
 
 static void DisconnectPlayer(int player_num);
 
-static int CanPlant(int player_num, struct Position bomb_pos);
+static int CanPlant(int player_num);
 
-static void PlantBomb(uint8_t player_num, struct Position pos);
+static void PlantBomb(uint8_t player_num);
 
 static int CanMove(int player_num, struct Position next_pos);
 
@@ -87,7 +105,6 @@ static void MovePlayer(int player_num, struct Position next_pos);
 static void RespawnPlayer(int player_num);
 
 static void DecreaseResTime(int player_num);
-
 
 static void KillPlayer(int victim_num, int killer_num,
                        struct Position murder_pos);
@@ -104,6 +121,27 @@ static void InitializeFireField(void);
 static void InitializePlayersInfo(void);
 
 /* Definitons. */
+void ConvertActionTable(struct ActionTable *action_table) {
+  struct Position pos;
+  int i;
+
+  /* Converting move positins.*/
+  for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
+    if (action_table->player_info[i].suicide) {
+      continue;
+    }
+
+    if (action_table->player_info[i].move_pos.x == 0 &&
+        action_table->player_info[i].move_pos.y == 0) {
+      continue;
+    }
+
+    pos = g_player_info[i].pos;
+    action_table->player_info[i].move_pos.x += pos.x;
+    action_table->player_info[i].move_pos.y += pos.y;
+  }
+}
+
 void AddPlayers(const struct ActionTable *action_table) {
   int i;
 
@@ -131,16 +169,20 @@ void SuicidePhase(const struct ActionTable *action_table) {
   }
 }
 
-int CanPlant(int player_num, struct Position bomb_pos) { 
+int CanPlant(int player_num) { 
+  struct Position bomb_pos   = g_player_info[player_num].bomb_info.pos;
+  struct Position player_pos = g_player_info[player_num].pos;
+  
   uint8_t has_bomb = g_table.player_stats[player_num].bomb;
-  uint8_t is_player_on_bomb = 
-        g_player_info[player_num].bomb_info.pos.x == bomb_pos.x &&
-        g_player_info[player_num].bomb_info.pos.y == bomb_pos.y;
+  uint8_t is_player_on_bomb = bomb_pos.x == player_pos.x &&
+                              bomb_pos.y == player_pos.y;
   
   return (!is_player_on_bomb && has_bomb);
 }
 
-void PlantBomb(uint8_t player_num, struct Position pos) {
+void PlantBomb(uint8_t player_num) {
+  struct Position pos = g_player_info[player_num].pos;
+
   g_field.location[pos.y][pos.x] = PLAYER_1_BOMB + player_num;
   
   g_player_info[player_num].bomb_info.pos = pos;
@@ -153,12 +195,13 @@ void PlantingPhase(struct ActionTable *action_table) {
   int i;
 
   for (i = 0; i < MAX_PLAYER_AMOUNT; ++i) {
-    if (g_player_info[i].state != ALIVE) {
+    if (g_player_info[i].state != ALIVE ||
+        !action_table->player_info[i].bomb) {
       continue;
     }
     
-    if (CanPlant(i, action_table->player_info[i].bomb_pos)) {
-      PlantBomb(i, action_table->player_info[i].bomb_pos);
+    if (CanPlant(i)) {
+      PlantBomb(i);
       action_table->player_info[i].move_pos.x = 0;
       action_table->player_info[i].move_pos.y = 0;
     }
@@ -332,6 +375,7 @@ void DetonateBomb(struct Position bomb_pos) {
   int bomb_num = -1;
   int i;
 
+  /* Find player that owns this bomb. */
   for (i = 0; i < MAX_PLAYER_AMOUNT && bomb_num == -1; ++i) {
     if (bomb_pos.x == g_player_info[i].bomb_info.pos.x &&
         bomb_pos.y == g_player_info[i].bomb_info.pos.y) {
@@ -443,6 +487,7 @@ void InitializePlayersInfo(void) {
 /* Interface definitions.     */
 /*                            */
 void Update(struct ActionTable *action_table) {
+  ConvertActionTable(action_table);
   AddPlayers(action_table);
   SuicidePhase(action_table);
   PlantingPhase(action_table);
