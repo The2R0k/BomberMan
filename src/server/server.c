@@ -7,7 +7,7 @@
 #define PORT_UDP 4444
 #define PORT_TCP_S 4445 
 #define PORT_TCP_CLIENT 9999
-#define SERVER_IP "192.168.2.30"
+#define SERVER_IP "25.64.18.2"
 #define TCP_CONNECTS 5
 #define MAX_PLAYERS 4
 #define INFINITU_CYCLE 1
