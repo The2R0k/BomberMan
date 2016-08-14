@@ -17,7 +17,7 @@
 */
 enum Doing {
   NOTHING = 0,
-  BOMB = 1,
+  PLANT_BOMB = 1,
   MOVE_LEFT,
   MOVE_RIGHT,
   MOVE_TOP,

@@ -1,13 +1,13 @@
 #include "network.h"
 
 /* Global variables */
-int tcp_sock, udp_sock, client_sock;
-char tmp;
-char *address;
-struct sockaddr_in client_addr, server_addr;
+static int tcp_sock, udp_sock, client_sock;
+static char tmp;
+static char *address;
+static struct sockaddr_in client_addr, server_addr;
 static int state;
 
-void initUDP(char const *argv[]) {
+void InitUDP(char const *argv[]) {
 
   if ((udp_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
     perror("socket()");
@@ -20,7 +20,7 @@ void initUDP(char const *argv[]) {
   server_addr.sin_port = htons(atoi(argv[2]));
 }
 
-void initTCP() {
+void InitTCP() {
   struct ifreq ifr;
   const int on = 1;
   socklen_t server_len;
@@ -69,12 +69,12 @@ void initTCP() {
   }
 }
 
-void shutdownNetwork() {
+void ShutdownNetwork() {
   close(tcp_sock);
   close(udp_sock);
 }
 
-void registration(struct ClientToServer *msg) {
+void Registration(struct ClientToServer *msg) {
   int bytes = 0;
 
   msg->id = 0;
@@ -91,7 +91,7 @@ void registration(struct ClientToServer *msg) {
   }
 }
 
-void sendMsg(struct ClientToServer *msg) {
+void SendMsg(struct ClientToServer *msg) {
   if (sendto(udp_sock, msg, CLIENT_MSG_SIZE, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
     perror("send()");
     close(udp_sock);
@@ -99,7 +99,7 @@ void sendMsg(struct ClientToServer *msg) {
   }
 }
 
-struct ServerToClient * recvMsg() {
+struct ServerToClient *RecvMsg() {
   struct ServerToClient *recvMsg;
 
   if (recv(client_sock, &recvMsg, SERVER_MSG_SIZE, 0) < 0) {
@@ -113,7 +113,7 @@ struct ServerToClient * recvMsg() {
 }
 
 /*for debug*/
-struct ClientToServer * recvMsg2() {
+struct ClientToServer *RecvMsg2() {
   struct ClientToServer *recvMsg;
 
   if (recv(tcp_sock, &recvMsg, SERVER_MSG_SIZE, 0) < 0) {
@@ -126,7 +126,7 @@ struct ClientToServer * recvMsg2() {
   return recvMsg;
 }
 
-void runClient(char const *argv[], struct ClientToServer *msg) {
+void RunClient(char const *argv[], struct ClientToServer *msg) {
   switch (state) {
     case CONNECT_NEW_PLAYER:
       initUDP(argv);

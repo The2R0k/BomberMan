@@ -28,18 +28,18 @@
 #define PORT 9999
 
 /*init and shutdown network*/
-void initUDP(char const *argv[]);
-void initTCP();
-void shutdownNetwork();
+void InitUDP(char const *argv[]);
+void OnitTCP();
+void ShutdownNetwork();
 /*send position info...
   when connect new player */
-void registration(struct ClientToServer *msg);
+void Registration(struct ClientToServer *msg);
 /*when player did action */
-void sendMsg(struct ClientToServer *msg);
+void SendMsg(struct ClientToServer *msg);
 /*get message from server*/
-struct ServerToClient * recvMsg();
+struct ServerToClient *RecvMsg();
 
 /*for debug*/
-struct ClientToServer * recvMsg2();
+struct ClientToServer *RecvMsg2();
 
 #endif /* _NETWORK_H_ */
