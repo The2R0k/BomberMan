@@ -1,5 +1,7 @@
 #include "gui.h"
 
+#include "network.h"
+
 #include <stdio.h>
 
 int8_t IsAddressValid(char *ip_address) {
@@ -29,6 +31,13 @@ void StartNewGame(void) {
 }
 
 int8_t Connect(char *ip_address) {  
+  printf("Init udp\n");
+  InitUDP(ip_address);
+  printf("Registration\n");
+  Registration();
+  printf("Init tcp\n");
+  InitTCP(ip_address);
+  printf("Done\n");
   
   return 1;
 }

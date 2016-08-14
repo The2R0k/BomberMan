@@ -6,7 +6,6 @@
 /* Global variables */
 static int tcp_sock, udp_sock, client_sock;
 static char tmp;
-static char *address;
 static struct sockaddr_in client_addr, server_addr;
 static int state;
 
@@ -19,7 +18,7 @@ void InitUDP(char *server_ip) {
   bzero(&server_addr, sizeof(server_addr));
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = inet_addr(server_ip);
-  server_addr.sin_port = htons(CLIENT_PORT);
+  server_addr.sin_port = htons(SERVER_PORT);
 }
 
 void InitTCP() {
@@ -32,19 +31,10 @@ void InitTCP() {
     exit(-1);
   }
 
-  /* get an IPv4 IP address */
-  ifr.ifr_addr.sa_family = AF_INET;
-
-  /* IP address attached to "enp2s0f0" */
-  strncpy(ifr.ifr_name, "enp2s0f0", IFNAMSIZ - 1);
-  ioctl(tcp_sock, SIOCGIFADDR, &ifr);
-  address = inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr);
-  // printf("%s\n", address);
-
   bzero(&client_addr, sizeof(client_addr));
   client_addr.sin_family = AF_INET;
-  client_addr.sin_addr.s_addr = inet_addr(address);
-  client_addr.sin_port = htons(PORT);
+  client_addr.sin_addr.s_addr = INADDR_ANY;
+  client_addr.sin_port = htons(CLIENT_PORT);
 
   if (setsockopt(tcp_sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &on,
                  sizeof(on)) < 0) {
@@ -79,19 +69,19 @@ void ShutdownNetwork() {
   close(udp_sock);
 }
 
-void Registration(struct ClientToServer *msg) {
-  msg->id = 0;
-  msg->bomb.x = 0;
-  msg->bomb.y = 0;
-  msg->move.x = 0;
-  msg->move.y = 0;
+void Registration(void) {
+  struct ClientToServer msg;
 
-  if (sendto(udp_sock, msg, CLIENT_MSG_SIZE, 0, (struct sockaddr *)
-                      &server_addr, sizeof(server_addr)) < 0) {
+  msg.id = 0;
+  msg.doing = NOTHING;
+
+  if (sendto(udp_sock, &msg, sizeof(msg), 0,
+             (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
     perror("send()");
     close(udp_sock);
     exit(-1);
   }
+  printf("Sent\n");
 }
 
 void SendMsg(struct ClientToServer *msg) {
@@ -128,19 +118,4 @@ struct ClientToServer *RecvMsg2() {
   }
 
   return recvMsg;
-}
-
-void RunClient(char const *argv[], struct ClientToServer *msg) {
-  switch (state) {
-    case CONNECT_NEW_PLAYER:
-      initUDP(argv);
-      initTCP();
-      registration(msg);
-      break;
-
-    case PLAYER_DID_ACTION:
-      sendMsg(msg);
-
-      break;
-  }
 }

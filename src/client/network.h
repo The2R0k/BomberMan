@@ -25,15 +25,14 @@
 
 #define CONNECT_NEW_PLAYER 0
 #define PLAYER_DID_ACTION 1
-#define PORT 9999
 
 /*init and shutdown network*/
 void InitUDP(char *server_ip);
-void OnitTCP();
+void InitTCP();
 void ShutdownNetwork();
 /*send position info...
   when connect new player */
-void Registration(struct ClientToServer *msg);
+void Registration(void);
 /*when player did action */
 void SendMsg(struct ClientToServer *msg);
 /*get message from server*/

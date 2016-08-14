@@ -6,20 +6,20 @@
 #ifndef _CLIENT_GUI_H_
 #define _CLIENT_GUI_H_
 
-#include "network.h"
+#include <stdint.h>
 
-static int8_t IsAddressValid(char *ip_address);
+int8_t IsAddressValid(char *ip_address);
 
-static void PrintGreetings(void);
+void PrintGreetings(void);
 
-static void PrintMenu(void);
+void PrintMenu(void);
 
-static void StartNewGame(void);
+void StartNewGame(void);
 
-static int8_t Connect(char *ip_address);
+int8_t Connect(char *ip_address);
 
-static void TryConnect(void);
+void TryConnect(void);
 
-static void ShowStartingMenu(void);
+void ShowStartingMenu(void);
 
 #endif /* _CLIENT_GUI_H_ */
