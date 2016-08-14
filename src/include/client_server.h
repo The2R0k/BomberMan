@@ -20,7 +20,7 @@
 */
 enum Doing {
   NOTHING = 0,
-  BOMB = 1,
+  PLANT_BOMB = 1,
   MOVE_LEFT,
   MOVE_RIGHT,
   MOVE_TOP,
@@ -32,8 +32,8 @@ enum Doing {
 */
 struct ClientToServer
 {
-  enum Doing doing;
   uint8_t id;
+  enum Doing doing;
 } __attribute__((packed));
 
 /**
@@ -42,9 +42,9 @@ struct ClientToServer
   First time sending new id, and new field.
 */
 struct ServerToClient {
+  uint8_t id;
   struct Field field;
   struct Dklb stats;
-  uint8_t id;
 } __attribute__((packed));
 
 
