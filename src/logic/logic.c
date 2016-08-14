@@ -181,7 +181,7 @@ int CanPlant(int player_num) {
 }
 
 void PlantBomb(uint8_t player_num) {
-  struct Position pos = g_player_info[player_num].bomb_info.pos;
+  struct Position pos = g_player_info[player_num].pos;
 
   g_field.location[pos.y][pos.x] = PLAYER_1_BOMB + player_num;
   
@@ -375,6 +375,7 @@ void DetonateBomb(struct Position bomb_pos) {
   int bomb_num = -1;
   int i;
 
+  /* Find player that owns this bomb. */
   for (i = 0; i < MAX_PLAYER_AMOUNT && bomb_num == -1; ++i) {
     if (bomb_pos.x == g_player_info[i].bomb_info.pos.x &&
         bomb_pos.y == g_player_info[i].bomb_info.pos.y) {
