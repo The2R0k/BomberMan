@@ -152,7 +152,8 @@ void Run(void) {
   char *line = NULL;
   size_t count = 0;
  
-  close(STDERR_FILENO); 
+  /* TODO: add after debugging. */
+  /* close(STDERR_FILENO); */
   PrintGreetings();
   while (!need_exit) {
     PrintMenu();
