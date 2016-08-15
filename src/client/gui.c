@@ -59,50 +59,15 @@ void StartNewGame(void) {
 }
 
 void StartGameCircle(void) {
-  if (fork() == 0) {
-    char key;
-    enum Doing action;
-    /* Keyboard process. */
-    while (1) {
-      key = getchar();
-      switch (key) {
-        case '\n':
-        case ' ':
-          action = PLANT_BOMB;
-          break;
-        case 27:
-          getchar();
-          key = getchar(); 
-          /* TODO: change to if and +. */
-          switch (key) {
-            case 'A':  /* Top arrow. */
-              action = MOVE_TOP;
-              break;
-            case 'B':  /* Down arrow. */
-              action = MOVE_DOWN;
-              break;
-            case 'C':  /* Right arrow. */
-              action = MOVE_RIGHT;
-              break;
-            case 'D':  /* Left arrow. */
-              action = MOVE_LEFT;
-              break;
-            default:
-              action = NOTHING;
-              break;
-          }
-          break;
-        default:
-          action = NOTHING;
-          break;
-      }
+  enum Doing action;
 
-      if (!HandleAction(action)) {
-        /* TODO: handle error. */
-      }
-    }
-    exit(0);
-  }
+  action = NOTHING;
+   
+  while (1) {
+    HandleAction(action);
+    RecvMsg();
+    printf("Recv map\n");
+  } 
   /* TODO: run graphics.
    * It should be such as:
    *
@@ -169,13 +134,15 @@ void TryConnect(void) {
 void Run(void) {
   char c;
   int8_t need_exit = 0;
+  char *line = NULL;
+  size_t count = 0;
  
   close(STDERR_FILENO); 
   PrintGreetings();
   while (!need_exit) {
     PrintMenu();
-    c = getchar();
-    getchar(); /* Break symbol. */
+    getline(&line, &count, stdin);
+    c = line[0];
     if ('0' <= c && c <= '2') {
       need_exit = 1;
     }
@@ -194,5 +161,8 @@ void Run(void) {
         printf("==========================\n");
         break;
     }
+    free(line);
+    line = NULL;
+    count = 0;
   }
 }

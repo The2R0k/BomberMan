@@ -63,8 +63,6 @@ static void Registration(void);
 */
 static int8_t SendMsg(struct ClientToServer *msg);
 
-static struct ServerToClient RecvMsg(void);
-
 /*============================*/
 /*                            */
 /* Definitions.               */
@@ -174,6 +172,7 @@ int8_t Connect(char *server_ip) {
   InitUDP(server_ip);
   Registration();
   InitTCP();
+  printf("Tcp connected\n");
 
   msg_with_id = RecvMsg();
   player_id = msg_with_id.id;

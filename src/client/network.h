@@ -26,4 +26,10 @@ int8_t Connect(char *server_ip);
 */
 int8_t HandleAction(enum Doing action);
 
+/**
+  \brief Receive message from server.
+*/
+struct ServerToClient RecvMsg(void);
+
+
 #endif /* _NETWORK_H_ */
