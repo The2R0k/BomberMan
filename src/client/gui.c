@@ -74,11 +74,11 @@ static void PrintMap(struct Field *field) {
 void StartGameCircle(void) {
   struct ServerToClient *msg = NULL;
   int i = 0;
-  int8_t error = 0;
+  int8_t success = 1;
 
-  while (!error) {
-    if ((error = RecvMsg(&msg))) {
-      printf("Error: ");
+  while (success) {
+    if (!(success = RecvMsg(&msg))) {
+      printf("Error: %d\n", success);
     } else {
       printf("Recv map\n");
       PrintMap(&msg->field);
