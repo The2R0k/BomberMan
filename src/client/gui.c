@@ -73,15 +73,19 @@ static void PrintMap(struct Field *field) {
 
 void StartGameCircle(void) {
   struct ServerToClient *msg = NULL;
-
   int i = 0;
-  while (1) {
-    RecvMsg(&msg);
-    printf("Recv map\n");
-    PrintMap(&msg->field);
-    free(msg);
-    msg = NULL;
-    printf("Iteration %d\n", ++i);
+  int8_t error = 0;
+
+  while (!error) {
+    if ((error = RecvMsg(&msg))) {
+      printf("Error: ");
+    } else {
+      printf("Recv map\n");
+      PrintMap(&msg->field);
+      free(msg);
+      msg = NULL;
+      printf("Iteration %d\n", ++i);
+    }
   } 
   /* TODO: run graphics.
    * It should be such as:
@@ -105,8 +109,9 @@ void TryConnect(void) {
   size_t count = 0;
   int8_t need_exit = 0;
   size_t i;
+  int8_t is_error = 0;
   
-  while (!need_exit) {
+  while (!need_exit && !is_error) {
     printf("Write server ip address\n");
     printf("q - quit\n");
     printf("ip: ");
@@ -131,8 +136,11 @@ void TryConnect(void) {
     }
 
     if (IsAddressValid(ip_address)) {
-      if (Connect(ip_address))
+      if (Connect(ip_address)) {
         need_exit = 1;
+      } else {
+        is_error = 1;
+      } 
     }
     else {
       printf("Incorrect ip\n");
@@ -143,7 +151,11 @@ void TryConnect(void) {
     ip_address = NULL;
     count = 0;
   }
-  StartGameCircle();
+  if (!is_error) {
+    StartGameCircle();
+  } else {
+    printf("Error: can't connect to server.\n");
+  }
 }
 
 void Run(void) {
