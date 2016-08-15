@@ -22,7 +22,7 @@ enum Doing {
   MOVE_RIGHT,
   MOVE_TOP,
   MOVE_DOWN
-};
+} __attribute__((packed));
 
 /**
   \brief This struct should be sent to server from client.
@@ -37,7 +37,7 @@ struct ClientToServer {
 } __attribute__((packed));
 
 /**
-  \briefStruct to recv message from server.
+  \brief Struct to recv message from server.
 
   First sending: new id and new field.
 */
@@ -47,5 +47,4 @@ struct ServerToClient {
   struct Dklb stats;
 } __attribute__((packed));
 
-
-#endif
+#endif /* _CLIENT_SERVER_H_ */
