@@ -33,7 +33,7 @@ int8_t HandleAction(enum Doing action);
   This func call malloc inside,
   so you should free memory after usage manually.
 */
-void RecvMsg(struct ServerToClient **msg); 
+int8_t RecvMsg(struct ServerToClient **msg); 
 
 
 #endif /* _NETWORK_H_ */

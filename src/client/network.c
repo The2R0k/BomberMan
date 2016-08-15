@@ -19,6 +19,9 @@
 #define SERVER_PORT 4444
 #define CLIENT_PORT 9999
 
+#define SUCCESS 1
+#define FAIL 0
+
 /*============================*/
 /*                            */
 /* Global variables.          */
@@ -39,12 +42,12 @@ static uint8_t player_id;
   \brief Init UDP socket.
   \param server_ip Server ip address. Should be correct.
 */
-static void InitUDP(char *server_ip);
+static int8_t InitUDP(char *server_ip);
 
 /**
   \brief Init TCP socket.
 */
-static void InitTCP(void);
+static int8_t InitTCP(void);
 
 /**
   \brief Close all network connects.
@@ -67,25 +70,27 @@ static int8_t SendMsg(struct ClientToServer *msg);
 /*                            */
 /* Definitions.               */
 /*                            */
-void InitUDP(char *server_ip) {
+int8_t InitUDP(char *server_ip) {
   if ((udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
     perror("socket() error");
-    exit(-1);
+    return FAIL;
   }
 
   memset(&server_addr, 0, sizeof(struct sockaddr_in));
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = inet_addr(server_ip);
   server_addr.sin_port = htons(SERVER_PORT);
+
+  return SUCCESS;
 }
 
-void InitTCP(void) {
+int8_t InitTCP(void) {
   const int on = 1;
   socklen_t server_len;
 
   if ((tcp_listener_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     perror("socket()");
-    exit(-1);
+    return FAIL;
   }
 
   memset(&client_addr, 0, sizeof(struct sockaddr_in));
@@ -97,28 +102,34 @@ void InitTCP(void) {
                  &on, sizeof(on)) < 0) {
     perror("setsockopt() error");
     close(tcp_listener_sock);
-    exit(-1);
+    close(udp_sock);
+    return FAIL;
   }
 
   if (bind(tcp_listener_sock, (struct sockaddr *) &client_addr,
            sizeof(client_addr)) < 0) {
     perror("bind() error");
     close(tcp_listener_sock);
-    exit(-1);
+    close(udp_sock);
+    return FAIL;
   }
 
   if (listen(tcp_listener_sock, 1) < 0) {
     perror("listen() error");
     close(tcp_listener_sock);
-    exit(-1);
+    close(udp_sock);
+    return FAIL;
   }
 
   server_len = sizeof(server_addr);
   if((client_sock = accept(tcp_listener_sock, (struct sockaddr*)&server_addr,
                            &server_len)) < 0) {
     perror("accept() error");
-    exit(-1);
+    close(udp_sock);
+    return FAIL;
   }
+
+  return SUCCESS;
 }
 
 void ShutdownNetwork(void) {
@@ -127,14 +138,17 @@ void ShutdownNetwork(void) {
   close(client_sock);
 }
 
-void Registration(void) {
+int8_t Registration(void) {
   struct ClientToServer msg;
 
   msg.id = 0;
   msg.doing = NOTHING;
   if (!SendMsg(&msg)) {
     /* TODO: add error handling. Server may be unreachable. */
+    return FAIL;
   }
+
+  return SUCCESS;
 }
 
 int8_t SendMsg(struct ClientToServer *msg) {
@@ -143,12 +157,12 @@ int8_t SendMsg(struct ClientToServer *msg) {
     /* TODO: add net errors such as disconnect. */
     perror("send()");
     close(udp_sock);
-    return 0;
+    return FAIL;
   }
-  return 1;
+  return SUCCESS;
 }
 
-void RecvMsg(struct ServerToClient **msg) {
+int8_t RecvMsg(struct ServerToClient **msg) {
   int bytes;
 
   *msg = malloc(sizeof(struct ServerToClient));
@@ -156,11 +170,11 @@ void RecvMsg(struct ServerToClient **msg) {
   if ((bytes = recv(client_sock, (*msg),
                     sizeof(struct ServerToClient), 0)) <= 0) {
     perror("recv()");
-    close(client_sock);
-    close(tcp_listener_sock);
-    exit(-1);
+    ShutdownNetwork();
+    return FAIL;
   }
   printf("Bytes recv: %d\n", bytes);
+  return SUCCESS;
 }
 
 /*============================*/
@@ -171,19 +185,24 @@ int8_t Connect(char *server_ip) {
   struct ServerToClient *msg_with_id;
   
   player_id = 0;
-  InitUDP(server_ip);
-  Registration();
-  InitTCP();
+  if (!InitUDP(server_ip))
+    return FAIL;
+  if (!Registration())
+    return FAIL;
+  if (!InitTCP())
+    return FAIL;
   printf("Tcp connected\n");
 
-  RecvMsg(&msg_with_id);
+  if (!RecvMsg(&msg_with_id))
+    return FAIL;
+
   player_id = msg_with_id->id;
   free(msg_with_id);
   msg_with_id = NULL;
 
   printf("Connect done\n");
 
-  return 1; 
+  return SUCCESS; 
 }
 
 int8_t HandleAction(enum Doing action) {
@@ -194,7 +213,7 @@ int8_t HandleAction(enum Doing action) {
 
   if (!SendMsg(&msg)) {
     perror("HandleAction() error");
-    return 0;
+    return FAIL;
   }
-  return 1;
+  return SUCCESS;
 }
