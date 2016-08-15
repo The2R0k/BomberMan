@@ -58,15 +58,30 @@ void StartNewGame(void) {
   }
 }
 
-void StartGameCircle(void) {
-  enum Doing action;
+/* TODO: remove after debugging. */
+static void PrintMap(struct Field *field) {
+  int i, j;
 
-  action = NOTHING;
-   
+  for (i = 0; i < FIELD_SIZE; ++i) {
+    for (j = 0; j < FIELD_SIZE; ++j) {
+      printf("%hu", field->location[i][j]);
+    }
+    printf("\n");
+  }
+  printf("\n");
+}
+
+void StartGameCircle(void) {
+  struct ServerToClient *msg = NULL;
+
+  int i = 0;
   while (1) {
-    HandleAction(action);
-    RecvMsg();
+    RecvMsg(&msg);
     printf("Recv map\n");
+    PrintMap(&msg->field);
+    free(msg);
+    msg = NULL;
+    printf("Iteration %d\n", ++i);
   } 
   /* TODO: run graphics.
    * It should be such as:

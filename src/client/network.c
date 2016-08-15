@@ -153,7 +153,7 @@ void RecvMsg(struct ServerToClient **msg) {
 
   *msg = malloc(sizeof(struct ServerToClient));
   (*msg)->id = 0;
-  if ((bytes = recv(client_sock, &msg,
+  if ((bytes = recv(client_sock, (*msg),
                     sizeof(struct ServerToClient), 0)) <= 0) {
     perror("recv()");
     close(client_sock);
@@ -177,9 +177,11 @@ int8_t Connect(char *server_ip) {
   printf("Tcp connected\n");
 
   RecvMsg(&msg_with_id);
-  player_id = msg_with_id.id;
+  player_id = msg_with_id->id;
   free(msg_with_id);
   msg_with_id = NULL;
+
+  printf("Connect done\n");
 
   return 1; 
 }
