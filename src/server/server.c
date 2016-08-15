@@ -10,16 +10,16 @@
 
 #define TCP_CONNECTS 5
 #define MAX_PLAYERS 4
-#define MIN_PLAYERS 2    /*How much player must been connected before Update */
+#define MIN_PLAYERS 2  /* How many player should be connected before Update. */
 
 #define MAKE_TCP_SOCK 1
 #define MAKE_UDP_SOCK 2
 
-#define TIK_TO_START 6
+#define TICK_TO_START 6
 #define INFINITU_CYCLE 1
-#define DEFAULT 0        /* default - default value (always must been zero   */
+#define DEFAULT 0        /* Default value (always must been zero). */
 #define CONNECT_TRY_MAX 5 
-#define ONE_TIK_TIME 500 /* one tik time it's time between Update(1) in mSec */
+#define ONE_TICK_TIME 500 /* Time between one Update in mSec. */
 
 #define TRUE 1
 #define FALSE 0
@@ -32,32 +32,30 @@ struct ConnectInfo {
 };
 
 static uint8_t connects_count = DEFAULT;
-static uint8_t tik_counter = DEFAULT;
+static uint8_t tick_counter = DEFAULT;
 static struct tms tmsBegin, tmsEnd;
+static int sock_udp;
 
-static int Tik(){
-  return tik_counter++;
+static int Tick(void) {
+  return tick_counter++;
 }
 
-static void SendLog(const char *message)
-{
+static void SendLog(const char *message) {
   printf("new log message::\n    %s\n",message);
 }
 
-static void NewPlayer()
-{
+static void NewPlayer(void) {
   connects_count++;
 }
 
-static void SuidPlayer()
-{
+static void SuidPlayer(void) {
   connects_count--;
 }
 
-static int MakeSocketNonBlocking (int sock)
-{
+static int MakeSocketNonBlocking(int sock) {
   int flags, s;
   int opt_flag = 1;
+
   flags = fcntl (sock, F_GETFL, DEFAULT);
   if (flags == -1) {
     perror ("fcntl");
@@ -76,13 +74,18 @@ static int MakeSocketNonBlocking (int sock)
   return DEFAULT;
 }
 
-static int MakeSocket(int flaq){
+static int MakeSocket(int flaq) {
   int bv;
+  
   if (flaq == MAKE_TCP_SOCK) {
     bv = socket(AF_INET, SOCK_STREAM, DEFAULT);
   } else {
     bv = socket(AF_INET, SOCK_DGRAM, DEFAULT);
   }
+  if (bv < 0) {
+    perror("Socket error");
+  }
+
   return bv;
 }
 
@@ -93,15 +96,16 @@ void TimeStart(void) {
 
 static long TimeCheck(void) {
   times(&tmsEnd);
-  Tik();
+  Tick();
 
   return (((tmsEnd.tms_utime - tmsBegin.tms_utime) +
           (tmsEnd.tms_stime - tmsBegin.tms_stime)) * 1000);
 }
 
 static void ActionTableClear(struct ActionTable *action_table) {
-  int i = DEFAULT;
-  for(; i < MAX_PLAYERS; ++i) {
+  int i;
+
+  for(i = 0; i < MAX_PLAYERS; ++i) {
     action_table->player_info[i].suicide = DEFAULT;
     action_table->player_info[i].bomb = DEFAULT;
     action_table->player_info[i].move_pos.x = DEFAULT;
@@ -109,13 +113,33 @@ static void ActionTableClear(struct ActionTable *action_table) {
   }
 }
 
-static int RunServer() {
+static int8_t CreateSockets(struct ConnectInfo player_info[]) {
+  int i;
+  
+  for (i = DEFAULT; i < TCP_CONNECTS; ++i) {
+    player_info[i].id = i;
+    player_info[i].status = FALSE;
+    player_info[i].sock_tcp = MakeSocket(MAKE_TCP_SOCK);
+    if(player_info[i].sock_tcp < 0) {
+      printf("%d ", i);
+      perror("CreateSockets() error");
+      return 0;
+    }
+    printf("new socket is:%d \n", player_info[i].sock_tcp);
+
+  }
+  sock_udp = MakeSocket(MAKE_UDP_SOCK);;
+  if (sock_udp < 0) {
+    perror("CreateSockets() error");
+    return 0;
+  }
+}
+
+static int8_t RunServer() {
   int i,bv;
   int back_value_array[MAX_PLAYERS];
-  int sock_udp;
   int new_player_flaq = FALSE;
   int connect_flaq = FALSE;
-
 
   struct ClientToServer *bufer;
   struct ServerToClient *msg;
@@ -124,56 +148,37 @@ static int RunServer() {
   struct ActionTable action_table;
 
   struct sockaddr_in server;
-  struct ConnectInfo playerInfo[TCP_CONNECTS];
+  struct ConnectInfo player_info[TCP_CONNECTS];
   struct Field field;
   socklen_t server_len, from_len;
   
   /* make sockets */
-  for (i = DEFAULT; i < TCP_CONNECTS; ++i) {
-    playerInfo[i].id = i;
-    playerInfo[i].status = FALSE;
-    playerInfo[i].sock_tcp = MakeSocket(MAKE_TCP_SOCK);
-    if(playerInfo[i].sock_tcp <= FALSE) {
-      printf("%d::",i);
-      perror("can't make socket::");
-      return 1;
-    }
-    printf("new socket is:%d \n", playerInfo[i].sock_tcp);
-
+  if (!CreateSockets(player_info)) {
+    return 0;
   }
-  sock_udp = MakeSocket(MAKE_UDP_SOCK);;
- 
-  if (sock_udp <= FALSE) {
-    printf("can't make socket\n");
-    return 1;
-  }
- 
-  printf("udp socket is %d\n",sock_udp);
+  printf("udp socket is %d\n", sock_udp);
 
   /* UDP socket bind part */
-
   MakeSocketNonBlocking(sock_udp);
 
   server.sin_addr.s_addr = inet_addr(SERVER_IP);
   server.sin_family = AF_INET;
-  server.sin_port = htons(PORT_UDP);
-  
+  server.sin_port = htons(PORT_UDP); 
   server_len = sizeof(struct sockaddr_in);    
 
   bv = bind(sock_udp, (struct sockaddr*) &server, server_len);
-  if (bv < FALSE) {
-    perror("can't bind udp:");
-    return 1;
+  if (bv < 0) {
+    perror("Bind udp error");
+    return 0;
   }
   
-  /*TCP BIND PART */
-
+  /* TCP bind part. */
   for (i = DEFAULT; i < TCP_CONNECTS; ++i) {
-    MakeSocketNonBlocking(playerInfo[i].sock_tcp);
+    MakeSocketNonBlocking(player_info[i].sock_tcp);
     
     server.sin_port = htons(PORT_TCP_S + i);
     server_len = sizeof(struct sockaddr_in);
-    bv = bind(playerInfo[i].sock_tcp,(struct sockaddr*)&server,server_len);
+    bv = bind(player_info[i].sock_tcp, (struct sockaddr*) &server, server_len);
     printf("now bv is %d\n",bv);
     if (bv < DEFAULT) {
         perror("can't bind someone tcp::");
@@ -194,7 +199,7 @@ static int RunServer() {
   while (INFINITU_CYCLE) {    
     from_len = sizeof(struct sockaddr_in);
     bv = recvfrom(sock_udp, bufer, sizeof(struct ClientToServer), 0,
-            (struct sockaddr *) &playerInfo[DEFAULT].from, &from_len);
+            (struct sockaddr *) &player_info[DEFAULT].from, &from_len);
     if (bv > 0) {
       SendLog("\n\nget message");
       printf("%d:%d;", bufer->id, bufer->doing);
@@ -230,18 +235,19 @@ static int RunServer() {
               SendLog("i don't know what client want");
               break;
           }
-        }
+        } else {
+
       } else {
         bv = DEFAULT;
         from_len = sizeof(struct sockaddr_in);
         for (i = DEFAULT; i < MAX_PLAYER_AMOUNT; ++i) {
-          if(playerInfo[i + 1].status == TRUE){
-            if(playerInfo[i + 1].from.sin_addr.s_addr == 
-                playerInfo[DEFAULT].from.sin_addr.s_addr) {
-              close(playerInfo[i+1].sock_tcp);
+          if(player_info[i + 1].status == TRUE){
+            if(player_info[i + 1].from.sin_addr.s_addr == 
+                player_info[DEFAULT].from.sin_addr.s_addr) {
+              close(player_info[i+1].sock_tcp);
               bv = MakeSocket(MAKE_TCP_SOCK);
               if (bv > 0) {
-                playerInfo[i+1].sock_tcp = bv;
+                player_info[i+1].sock_tcp = bv;
                 SendLog("player reconnected");
                 new_player_flaq = i+1;
                 break;
@@ -251,10 +257,10 @@ static int RunServer() {
               }
             }
           }
-          if (playerInfo[i + 1].status == FALSE) {
+          if (player_info[i + 1].status == FALSE) {
             NewPlayer();
             new_player_flaq = i + 1;
-            playerInfo[i + 1].status = TRUE;
+            player_info[i + 1].status = TRUE;
             printf("new_player_flaq is :: %d\n", new_player_flaq);
             SendLog("we are have a new player");
             break;
@@ -262,15 +268,15 @@ static int RunServer() {
           new_player_flaq = DEFAULT;
         }
 
-        playerInfo[new_player_flaq].from.sin_port = htons(PORT_TCP_CLIENT);
-        playerInfo[new_player_flaq].from.sin_family = AF_INET;
-        playerInfo[new_player_flaq].from.sin_addr.s_addr = 
-            playerInfo[DEFAULT].from.sin_addr.s_addr;
+        player_info[new_player_flaq].from.sin_port = htons(PORT_TCP_CLIENT);
+        player_info[new_player_flaq].from.sin_family = AF_INET;
+        player_info[new_player_flaq].from.sin_addr.s_addr = 
+            player_info[DEFAULT].from.sin_addr.s_addr;
 
         for (i = DEFAULT; i < CONNECT_TRY_MAX; ++i) {
           SendLog("try connecting to client");
-          bv  = connect(playerInfo[new_player_flaq].sock_tcp,                 /*<<<<<<<<< can drop here */
-              (struct sockaddr *) &(playerInfo[new_player_flaq].from),
+          bv  = connect(player_info[new_player_flaq].sock_tcp, 
+              (struct sockaddr *) &(player_info[new_player_flaq].from),
               from_len);
           perror("connecting::");
           if (bv == DEFAULT) {
@@ -285,7 +291,7 @@ static int RunServer() {
           
           if (connect_flaq) {
             SendLog("Connected");
-            playerInfo[new_player_flaq].status = TRUE;
+            player_info[new_player_flaq].status = TRUE;
 
             msg->id = new_player_flaq;
             memmove(&(msg->field), game_field, sizeof(field));
@@ -294,7 +300,7 @@ static int RunServer() {
             msg->stats.length = DEFAULT;
             msg->stats.death = DEFAULT;
             msg->stats.bomb = DEFAULT;
-            bv = send(playerInfo[new_player_flaq].sock_tcp, msg,
+            bv = send(player_info[new_player_flaq].sock_tcp, msg,
                sizeof(struct ServerToClient), MSG_DONTWAIT);
             perror("connect::");
             connect_flaq = FALSE;
@@ -313,8 +319,8 @@ static int RunServer() {
     }
 
     if (connects_count >= 1) {
-/*          if(TimeCheck()>ONE_TIK_TIME){
-      if(Tik()>=TIK_TO_START){
+/*          if(TimeCheck()>ONE_TICK_TIME){
+      if(Tick()>=TICK_TO_START){
       TimeStart();                  */
       Update(&action_table);
 /*    TimeStart();
@@ -326,7 +332,7 @@ static int RunServer() {
         msg->stats.length = stats_table->player_stats[i].length;
         msg->stats.death  = stats_table->player_stats[i].death;
         msg->stats.bomb   = stats_table->player_stats[i].bomb;
-        back_value_array[i]=send(playerInfo[i + 1].sock_tcp, msg,
+        back_value_array[i]=send(player_info[i + 1].sock_tcp, msg,
               sizeof(struct ServerToClient), 0);
         
         SendLog("sending to client");
@@ -353,7 +359,7 @@ static int RunServer() {
   free(bufer);
   free(msg);
   for (i = DEFAULT; i < TCP_CONNECTS; ++i) {
-    close(playerInfo[i].sock_tcp);
+    close(player_info[i].sock_tcp);
   }
   close(sock_udp);
   return DEFAULT;
