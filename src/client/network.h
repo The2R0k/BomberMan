@@ -28,8 +28,12 @@ int8_t HandleAction(enum Doing action);
 
 /**
   \brief Receive message from server.
+  \param msg Pointer to pointer to msg.
+
+  This func call malloc inside,
+  so you should free memory after usage manually.
 */
-struct ServerToClient RecvMsg(void);
+void RecvMsg(struct ServerToClient **msg); 
 
 
 #endif /* _NETWORK_H_ */

@@ -124,6 +124,7 @@ void InitTCP(void) {
 void ShutdownNetwork(void) {
   close(tcp_listener_sock);
   close(udp_sock);
+  close(client_sock);
 }
 
 void Registration(void) {
@@ -137,8 +138,8 @@ void Registration(void) {
 }
 
 int8_t SendMsg(struct ClientToServer *msg) {
-  if (sendto(udp_sock, msg, CLIENT_MSG_SIZE, 0, (struct sockaddr *)
-             &server_addr, sizeof(server_addr)) < 0) {
+  if (sendto(udp_sock, msg, sizeof(struct ClientToServer), 0,
+        (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
     /* TODO: add net errors such as disconnect. */
     perror("send()");
     close(udp_sock);
@@ -147,17 +148,19 @@ int8_t SendMsg(struct ClientToServer *msg) {
   return 1;
 }
 
-struct ServerToClient RecvMsg(void) {
-  struct ServerToClient msg;
+void RecvMsg(struct ServerToClient **msg) {
+  int bytes;
 
-  if (recv(client_sock, &msg, SERVER_MSG_SIZE, 0) < 0) {
+  *msg = malloc(sizeof(struct ServerToClient));
+  (*msg)->id = 0;
+  if ((bytes = recv(client_sock, &msg,
+                    sizeof(struct ServerToClient), 0)) <= 0) {
     perror("recv()");
     close(client_sock);
     close(tcp_listener_sock);
     exit(-1);
   }
-
-  return msg;
+  printf("Bytes recv: %d\n", bytes);
 }
 
 /*============================*/
@@ -165,18 +168,19 @@ struct ServerToClient RecvMsg(void) {
 /* Interface definition.      */
 /*                            */
 int8_t Connect(char *server_ip) {
-  struct ServerToClient msg_with_id;
+  struct ServerToClient *msg_with_id;
   
   player_id = 0;
-
   InitUDP(server_ip);
   Registration();
   InitTCP();
   printf("Tcp connected\n");
 
-  msg_with_id = RecvMsg();
+  RecvMsg(&msg_with_id);
   player_id = msg_with_id.id;
-   
+  free(msg_with_id);
+  msg_with_id = NULL;
+
   return 1; 
 }
 
