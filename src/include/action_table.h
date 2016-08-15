@@ -17,7 +17,7 @@ struct ActionCell {
   uint8_t bomb;
 }__attribute__((packed));
 
-/*  Structure that server transfer to logic module. */
+/* Structure that server transfer to logic module. */
 struct ActionTable {
   struct ActionCell player_info[MAX_PLAYER_AMOUNT];
 };
