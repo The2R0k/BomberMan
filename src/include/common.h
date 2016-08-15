@@ -21,7 +21,7 @@ enum Cell {
   PLAYER_2_BOMB,
   PLAYER_3_BOMB,
   PLAYER_4_BOMB
-};
+} __attribute__((packed));
 
 struct Field {
   enum Cell location[FIELD_SIZE][FIELD_SIZE];

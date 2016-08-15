@@ -1,5 +1,6 @@
 #include "header.h"
 
+#include <unistd.h>
 
 #define EPOLL_QUEUE_LEN 1
 #define PORT_UDP 4444
@@ -13,7 +14,7 @@
 #define TIK_TO_START 6
 #define INFINITU_CYCLE 1
 #define DEFAULT 0        /* default - default value (always must been zero   */
-#define CONNECT_TRY_MAX 15 
+#define CONNECT_TRY_MAX 5 
 #define MIN_PLAYERS 2    /*How much player must been connected before Update */
 #define ONE_TIK_TIME 500 /* one tik time it's time between Update(1) in mSec */
 
@@ -100,7 +101,7 @@ static long TimeCheck(){
   Tik();
 
   return (((tmsEnd.tms_utime-tmsBegin.tms_utime)+
-          (tmsEnd.tms_stime-tmsBegin.tms_stime))/CLOCKS_PER_SEC);
+          (tmsEnd.tms_stime-tmsBegin.tms_stime))*1000);
 }
 
 static void ActionTableClear(struct ActionTable *action_table){
@@ -258,14 +259,32 @@ static int RunServer()
             from_len = sizeof(struct sockaddr_in);
             for(i=DEFAULT;i<MAX_PLAYER_AMOUNT;++i)
             {
-                if(playerInfo[i+1].status == FALSE)
-                {
+                if(playerInfo[i+1].status == TRUE){
+                  if(playerInfo[i+1].from.sin_addr.s_addr == 
+                      playerInfo[DEFAULT].from.sin_addr.s_addr){
+                    close(playerInfo[i+1].sock_tcp);
+                    bv = MakeSocket(MAKE_TCP_SOCK);
+                    if(bv>0){
+                      playerInfo[i+1].sock_tcp = bv;
+                      SendLog("player reconnected");
+                      new_player_flaq = i+1;
+                      break;
+                    }else{
+                      SendLog("Can't reopen sock");
+                      new_player_flaq = DEFAULT;
+                    }
+                  }
+                }
+                if(playerInfo[i+1].status == FALSE){
+                
+                    NewPlayer();
                     new_player_flaq = i+1;
+                    playerInfo[i+1].status = TRUE;
                     printf("new_player_flaq is :: %d\n",new_player_flaq);
                     SendLog("we are have a new player");
                     break;
                 }
-                new_player_flaq = FALSE;
+                new_player_flaq = DEFAULT;
             }
 
             playerInfo[new_player_flaq].from.sin_port = 
@@ -287,14 +306,18 @@ static int RunServer()
                 if(errno == EALREADY){
                   connect_flaq = TRUE;
                 }
+                if(errno == 106){
+                  connect_flaq = TRUE;
+                }
+                
                 if(connect_flaq){
 
                   SendLog("Connected");
                   playerInfo[new_player_flaq].status = TRUE;
-                  NewPlayer();
 
                   msg->id = new_player_flaq;
-                  memmove(&msg->field,&field,sizeof(field));
+                  memmove(&(msg->field), game_field, sizeof(field));
+                  
                   msg->stats.score = DEFAULT;
                   msg->stats.length = DEFAULT;
                   msg->stats.death = DEFAULT;
@@ -319,38 +342,41 @@ static int RunServer()
           }
         }
 
-        if(connects_count >= MIN_PLAYERS){
-          if(TimeCheck()>ONE_TIK_TIME){
+        if(connects_count >= 1){
+/*          if(TimeCheck()>ONE_TIK_TIME){
             if(Tik()>=TIK_TO_START){
-/*            TimeStart();                  */
+            TimeStart();                  */
               Update(&action_table);
-              TimeStart();
-              for(i=DEFAULT;i<MAX_PLAYERS;++i){
+/*              TimeStart();
+*/              for(i=DEFAULT;i<connects_count;++i){
                 msg->id = i+1;
                 printf("ID = %d\n", msg->id);
-                memmove(&msg->field,&field,sizeof(field));
+                memmove(&msg->field,&game_field,sizeof(field));
                 msg->stats.score = stats_table->player_stats[i].score;
                 msg->stats.length = stats_table->player_stats[i].length;
                 msg->stats.death = stats_table->player_stats[i].death;
                 msg->stats.bomb = stats_table->player_stats[i].bomb;
                 back_value_array[i]=send(playerInfo[i+1].sock_tcp,msg,
-                      sizeof(struct ServerToClient),MSG_DONTWAIT);
+                      sizeof(struct ServerToClient),0);
+                
                 SendLog("sending to client");
+                printf("back value array %d = %d",i,back_value_array[i]);
               }
               ActionTableClear(&action_table);
-              for(i=DEFAULT;i<MAX_PLAYERS;++i){
+/*              for(i=DEFAULT;i<max_players;++i){
                 if(back_value_array[i] < FALSE){
                   action_table.player_info[i].suicide = TRUE;
                   SuidPlayer();
                   SendLog("we are have a suid player");
                 }
               }
-              if(action_table.player_info[0].suicide == TRUE){
+*/              if(action_table.player_info[0].suicide == TRUE){
                 break;
               }
             }
-          }
+/*          }
         }
+*/      sleep(1);
       i++;
       }
 
