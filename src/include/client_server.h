@@ -19,13 +19,12 @@ enum Doing {
   MOVE_RIGHT,
   MOVE_TOP,
   MOVE_DOWN
-};
+} __attribute__((packed));
 
 /**
   \brief This struct should be sent to server from client.
 */
-struct ClientToServer
-{
+struct ClientToServer {
   uint8_t id;
   enum Doing doing;
 } __attribute__((packed));
