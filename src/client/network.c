@@ -51,7 +51,7 @@ static int8_t InitTCP(void);
 /**
   \brief Send first udp msg.
 */
-static void Registration(void);
+static int8_t Registration(void);
 
 /**
   \brief Send message msg to server.
