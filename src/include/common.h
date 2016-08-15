@@ -24,7 +24,7 @@ enum Cell {
 };
 
 struct Field {
-  enum Cell **location;
+  enum Cell location[FIELD_SIZE][FIELD_SIZE];
 };
 
 /*  Death, kill, length counters & bomb flag (have or not). */
