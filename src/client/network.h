@@ -35,5 +35,11 @@ int8_t HandleAction(enum Doing action);
 */
 int8_t RecvMsg(struct ServerToClient **msg); 
 
+/**
+  \brief Close all network connects.
+
+  Close sockets.
+*/
+void ShutdownNetwork(void);
 
 #endif /* _NETWORK_H_ */

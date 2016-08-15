@@ -1,5 +1,8 @@
 #include "network.h"
 
+#include "../include/action_table.h"
+#include "../include/client_server.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -11,10 +14,6 @@
 
 #include <sys/wait.h>
 #include <unistd.h>
-
-
-#include "../include/action_table.h"
-#include "../include/client_server.h"
 
 #define SERVER_PORT 4444
 #define CLIENT_PORT 9999
@@ -48,11 +47,6 @@ static int8_t InitUDP(char *server_ip);
   \brief Init TCP socket.
 */
 static int8_t InitTCP(void);
-
-/**
-  \brief Close all network connects.
-*/
-static void ShutdownNetwork(void);
 
 /**
   \brief Send first udp msg.
@@ -132,12 +126,6 @@ int8_t InitTCP(void) {
   return SUCCESS;
 }
 
-void ShutdownNetwork(void) {
-  close(tcp_listener_sock);
-  close(udp_sock);
-  close(client_sock);
-}
-
 int8_t Registration(void) {
   struct ClientToServer msg;
 
@@ -159,21 +147,6 @@ int8_t SendMsg(struct ClientToServer *msg) {
     close(udp_sock);
     return FAIL;
   }
-  return SUCCESS;
-}
-
-int8_t RecvMsg(struct ServerToClient **msg) {
-  int bytes;
-
-  *msg = malloc(sizeof(struct ServerToClient));
-  (*msg)->id = 0;
-  if ((bytes = recv(client_sock, (*msg),
-                    sizeof(struct ServerToClient), 0)) <= 0) {
-    perror("recv()");
-    ShutdownNetwork();
-    return FAIL;
-  }
-  printf("Bytes recv: %d\n", bytes);
   return SUCCESS;
 }
 
@@ -216,4 +189,25 @@ int8_t HandleAction(enum Doing action) {
     return FAIL;
   }
   return SUCCESS;
+}
+
+int8_t RecvMsg(struct ServerToClient **msg) {
+  int bytes;
+
+  *msg = malloc(sizeof(struct ServerToClient));
+  (*msg)->id = 0;
+  if ((bytes = recv(client_sock, (*msg),
+                    sizeof(struct ServerToClient), 0)) <= 0) {
+    perror("recv()");
+    ShutdownNetwork();
+    return FAIL;
+  }
+  printf("Bytes recv: %d\n", bytes);
+  return SUCCESS;
+}
+
+void ShutdownNetwork(void) {
+  close(tcp_listener_sock);
+  close(udp_sock);
+  close(client_sock);
 }
