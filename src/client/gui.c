@@ -9,10 +9,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdint.h>
-#include <SDL2/SDL.h>
 
 #include "network.h"
-#include "../include/bgraphics.h"
 
 /*============================*/
 /*                            */
@@ -77,28 +75,18 @@ void StartGameCircle(void) {
   struct ServerToClient *msg = NULL;
   int i = 0;
   int8_t success = 1;
-  SDL_Event event;
-  const Uint8 *keyboard_state = SDL_GetKeyboardState(NULL);
-  struct GraphSources *gs = malloc(sizeof(struct GraphSources));
-  GraphicsInit(gs);
 
   while (success) {
     if (!(success = RecvMsg(&msg))) {
       printf("Error: %d\n", success);
     } else {
-      SDL_PollEvent(&event);
-      SDL_PumpEvents();
       printf("Recv map\n");
       PrintMap(&msg->field);
-      RefreshState(&msg->field, &msg->stats, gs);
       free(msg);
       msg = NULL;
       printf("Iteration %d\n", ++i);
-      if (keyboard_state[SDL_SCANCODE_ESCAPE])
-        break;  
     }
-  }
-  CleanGraph(gs); 
+  } 
   /* TODO: run graphics.
    * It should be such as:
    *
