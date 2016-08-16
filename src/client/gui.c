@@ -9,9 +9,16 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdint.h>
+#include <sys/mman.h>
 #include <SDL2/SDL.h>
 
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #include "network.h"
+#include "keyboard.h"
 #include "../include/bgraphics.h"
 
 /*============================*/
@@ -74,46 +81,133 @@ static void PrintMap(struct Field *field) {
 }
 
 void StartGameCircle(void) {
-  struct ServerToClient *msg = NULL;
-  int i = 0;
-  int8_t success = 1;
-  SDL_Event event;
-  const Uint8 *keyboard_state = SDL_GetKeyboardState(NULL);
-  struct GraphSources *gs = malloc(sizeof(struct GraphSources));
-  GraphicsInit(gs);
+  uint8_t success = 1;
+  struct ServerToClient *msg;
+  /* Possible states of game cycle's threads 
+   * STABLE = 0, NEED_REFRESH = 1, NEED_EXIT = 2 */
+  enum ThreadState *thread_state;
+  
+  key_t shm_key = ftok("tempfile", 1);
+  int shm_id = shmget(shm_key, sizeof(struct ServerToClient) + sizeof(enum ThreadState), IPC_CREAT | 0666);
+  void *shm_mem;
 
-  while (success) {
-    if (!(success = RecvMsg(&msg))) {
-      printf("Error: %d\n", success);
-    } else {
-      SDL_PollEvent(&event);
-      SDL_PumpEvents();
-      printf("Recv map\n");
-      PrintMap(&msg->field);
-      RefreshState(&msg->field, &msg->stats, gs);
-      free(msg);
-      msg = NULL;
-      printf("Iteration %d\n", ++i);
-      if (keyboard_state[SDL_SCANCODE_ESCAPE])
-        break;  
-    }
+  if ((shm_mem = shmat(shm_id, NULL, 0)) == (void *) -1) {
+    perror("shmat:");
+    exit(0);
   }
-  CleanGraph(gs); 
-  /* TODO: run graphics.
-   * It should be such as:
-   *
-   * struct GameInfo game_info;
-   *
-   * InitializeGraphics();
-   * while (1) {
-   *   game_info = GetNewState();
-   *   GameUpdate(&game_info);
-   *   
-   *   Note: we don't need sleep, 'cause GetNewState() is blocking operation,
-   *   which calls RecvMsg from server inside.
-   *   TODO: think how end the game.
-   * }
-   */
+  thread_state = ((enum ThreadState *) shm_mem) + sizeof(struct ServerToClient);
+  *thread_state = STABLE;
+  /* Cleaning up the pointers */
+  thread_state = NULL;
+  msg = NULL;
+  shmdt(shm_mem);
+
+  /* if we are parent */
+  if(fork() == 0) {
+    /* SDL_Event datatype. Needs to follow "keypressed" events */
+    SDL_Event event;
+    /* To check current keyboard state - array of states for all the buttons */
+    const Uint8 *keyboard_state = SDL_GetKeyboardState(NULL);
+    /* This struct contains SDL graphic sources */
+    struct GraphSources *gs = malloc(sizeof(struct GraphSources));
+    int i = 0;
+    
+    shm_mem = shmat(shm_id, NULL, 0);
+    if (shm_mem == (void *) -1)
+      perror("shmat");
+    msg = shm_mem;
+    thread_state = ((enum ThreadState *) shm_mem) + sizeof(struct ServerToClient);
+
+    /* Waiting for accepting the data */
+    while (*thread_state != NEED_REFRESH)
+      SDL_Delay(5);
+    /* Initializing graphics. This function (like a RefreshState and CleanGraph) 
+     *works with pointer to struct GraphSiurces */
+    GraphicsInit(gs);
+    while (*thread_state != NEED_EXIT) {
+      /* Polling the events */
+      SDL_PollEvent(&event);
+      /* Refreshing events array in memory */ 
+      SDL_PumpEvents(); 
+      /* making delay value = 18 ms: 
+       *that's best choice to follow keyboard events 
+       *and do not load a processor */
+      SDL_Delay(18);
+
+      /* Keyboard events processing */
+      if (keyboard_state[SDL_SCANCODE_ESCAPE]) {
+        KeyEsc();
+        *thread_state = NEED_EXIT;
+        break;
+      }
+      if (keyboard_state[SDL_SCANCODE_SPACE] ||
+          keyboard_state[SDL_SCANCODE_RETURN]) { 
+        KeyBomb();
+      }
+      if (keyboard_state[SDL_SCANCODE_UP]) {
+        KeyUp();
+      }
+      if (keyboard_state[SDL_SCANCODE_DOWN]) {
+        KeyDown();
+      }
+      if (keyboard_state[SDL_SCANCODE_RIGHT]) {
+        KeyRight();
+      }
+      if (keyboard_state[SDL_SCANCODE_LEFT]) {
+        KeyLeft();
+      }
+      /* If data from server is accepted... */ 
+      if (*thread_state == NEED_REFRESH) {
+        printf("GRAPHICS: Refreshing...\t%d\n", *thread_state);
+        RefreshState(&msg->field, &msg->stats, gs);
+        printf("GRAPHICS: Reseting...\n");
+        *thread_state = STABLE;
+        printf("GRAPHICS: msg's free!\t%d\n", *thread_state);
+      }
+      printf("Iteration:\t%d\n", ++i); 
+    }
+    /* Cleaning up shared and graphic resourses from current thread */
+    CleanGraph(gs);
+    free(gs);
+    shmdt(shm_mem);
+    exit(0);
+  } else {
+    /* Buffer to hold input struct's values */
+    struct ServerToClient *buffer;
+
+    shm_mem = shmat(shm_id, NULL, 0);
+    if (shm_mem == (void *) -1)
+      perror("shmat");
+    msg = shm_mem;
+    /* Initializating pointer to enum ThreadState memory area */
+    thread_state = ((enum ThreadState *) shm_mem) + sizeof(struct ServerToClient);
+    /* While data is accepting successful and nobody pressed ESC */
+    while (success && (*thread_state != NEED_EXIT)) {
+      /* Accepting the data from server */
+      if (!(success = RecvMsg(&buffer))) {
+        printf("Error: %d\n", success);
+        *thread_state = NEED_EXIT;
+      } else {
+        if (*thread_state != NEED_EXIT)
+          /* Denotes that data is accepted and we need to refresh the render image */
+          *thread_state = NEED_REFRESH;
+        else if (*thread_state == NEED_EXIT) {
+          break;
+        }
+        /* translating buffer to shared memory */
+        memmove(msg, buffer, sizeof(struct ServerToClient));
+        free(buffer);
+        buffer = NULL;
+        printf("RECV: msg is waiting for freing\n");
+      }
+    }
+    /* Cleaning up the data and closing application */
+    wait(NULL);
+    shmdt(shm_mem);
+    msg = NULL;
+    thread_state = NULL;
+    shmctl(shm_id, IPC_RMID, 0);
+  }
 }
 
 void TryConnect(void) {

@@ -1,4 +1,4 @@
-objects = main.o gui.o network.o graphics.o
+objects = main.o gui.o network.o graphics.o keyboard.o
 
 LIBS = -lSDL2
 
@@ -17,6 +17,7 @@ gui.o : network.h
 gui.o : gui.h
 network.o : network.h
 graphics.o : ../graphics/graphics.c
+keyboard.o: keyboard.c
 
 $(objects) : %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
