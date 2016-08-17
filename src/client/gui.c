@@ -15,10 +15,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include <SDL2/SDL.h>
-
 #include "network.h"
-#include "keyboard.h"
 #include "../include/bgraphics.h"
 
 #define EXIT_KEY 1
@@ -71,7 +68,7 @@ void StartNewGame(void) {
 }
 
 int8_t HandleKeyPress(const Uint8 *keyboard_state) {
-  enum Doing action;
+  enum Doing action = NOTHING;
   
   if (keyboard_state[SDL_SCANCODE_ESCAPE]) {
     return EXIT_KEY;
@@ -80,19 +77,14 @@ int8_t HandleKeyPress(const Uint8 *keyboard_state) {
   if (keyboard_state[SDL_SCANCODE_SPACE] ||
       keyboard_state[SDL_SCANCODE_RETURN]) { 
     action = PLANT_BOMB;
-    KeyBomb();
   } else if (keyboard_state[SDL_SCANCODE_UP]) {
     action = MOVE_TOP;
-    KeyUp();
-  } else if (keyboard_state[SDL_SCANCODE_DOWN]) {
+  } else  if (keyboard_state[SDL_SCANCODE_DOWN]) {
     action = MOVE_DOWN;
-    KeyDown();
   } else if (keyboard_state[SDL_SCANCODE_RIGHT]) {
     action = MOVE_RIGHT;
-    KeyRight();
   } else if (keyboard_state[SDL_SCANCODE_LEFT]) {
     action = MOVE_LEFT;
-    KeyLeft();
   }
   if (!HandleAction(action))
     return -1;
@@ -100,19 +92,7 @@ int8_t HandleKeyPress(const Uint8 *keyboard_state) {
   return 0;
 }
 
-static void PrintMap(struct Field *field) {
-  int i, j;
-
-  for (i = 0; i < FIELD_SIZE; ++i) {
-    for (j = 0; j < FIELD_SIZE; ++j) {
-      printf("%hu", field->location[i][j]);
-    }
-    printf("\n");
-  }
-}
-
 void StartGameLoop(void) {
-  uint8_t msg_received = 1;
   struct ServerToClient *msg;
   /* Possible states of game cycle's threads 
    * STABLE = 0, NEED_REFRESH = 1, NEED_EXIT = 2 */
@@ -144,15 +124,14 @@ void StartGameLoop(void) {
   msg = NULL;
   shmdt(shm_mem);
 
-  /* if we are parent */
-  if(fork() == 0) {
+  if (fork() == 0) {
+    /* Child process. */
     /* SDL_Event datatype. Needs to follow "keypressed" events */
     SDL_Event event;
     /* To check current keyboard state - array of states for all the buttons */
     const Uint8 *keyboard_state = SDL_GetKeyboardState(NULL);
     /* This struct contains SDL graphic sources */
     struct GraphSources *gs = malloc(sizeof(struct GraphSources));
-    int i = 0;
     int8_t key_handled;
     
     shm_mem = shmat(shm_id, NULL, 0);
@@ -185,14 +164,9 @@ void StartGameLoop(void) {
       }
       /* If data from server is accepted... */ 
       if (*thread_state == NEED_REFRESH) {
-        printf("GRAPHICS: Refreshing...\t%d\n", *thread_state);
         RefreshState(&msg->field, &msg->stats, gs);
-        PrintMap(&msg->field);
-        printf("GRAPHICS: Reseting...\n");
         *thread_state = STABLE;
-        printf("GRAPHICS: msg's free!\t%d\n", *thread_state);
       }
-      printf("Iteration:\t%d\n", ++i); 
     }
     /* Cleaning up shared and graphic resourses from current process. */
     CleanGraph(gs);
@@ -200,8 +174,10 @@ void StartGameLoop(void) {
     shmdt(shm_mem);
     exit(0);
   } else {
+    /* Parent process. */
     /* Buffer to hold input struct's values */
     struct ServerToClient *buffer;
+    uint8_t msg_received = 1;
 
     shm_mem = shmat(shm_id, NULL, 0);
     msg = shm_mem;
@@ -225,10 +201,9 @@ void StartGameLoop(void) {
         
         /* Translating buffer to shared memory. */
         memmove(msg, buffer, sizeof(struct ServerToClient));
-        free(buffer);
-        buffer = NULL;
-        printf("RECV: msg is waiting for freing\n");
       }
+      free(buffer);
+      buffer = NULL;
     }
     /* Cleaning up the data and closing application */
     wait(NULL);
