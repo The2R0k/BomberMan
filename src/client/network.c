@@ -116,7 +116,7 @@ int8_t InitTCP(void) {
   }
 
   server_len = sizeof(server_addr);
-  if((client_sock = accept(tcp_listener_sock, (struct sockaddr*)&server_addr,
+  if ((client_sock = accept(tcp_listener_sock, (struct sockaddr*) &client_addr,
                            &server_len)) < 0) {
     perror("accept() error");
     close(udp_sock);
@@ -141,7 +141,7 @@ int8_t Registration(void) {
 
 int8_t SendMsg(struct ClientToServer *msg) {
   if (sendto(udp_sock, msg, sizeof(struct ClientToServer), 0,
-        (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+        (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in)) < 0) {
     /* TODO: add net errors such as disconnect. */
     perror("send()");
     close(udp_sock);
@@ -170,6 +170,7 @@ int8_t Connect(char *server_ip) {
     return FAIL;
 
   player_id = msg_with_id->id;
+  printf("My id = %hu\n", player_id);
   free(msg_with_id);
   msg_with_id = NULL;
 
@@ -179,17 +180,17 @@ int8_t Connect(char *server_ip) {
 }
 
 int8_t HandleAction(enum Doing action) {
-  struct ClientToServer msg;
+  struct ClientToServer* msg = malloc(sizeof(struct ClientToServer));
 
-  msg.id = player_id;
-  msg.doing = action;
+  msg->id = player_id;
+  msg->doing = action;
 
-  if (!SendMsg(&msg)) {
+  if (!SendMsg(msg)) {
     perror("HandleAction() error");
+    free(msg);
     return FAIL;
-  } else {
-    printf("Sended action:%hu\n", action);
   }
+  free(msg);
   return SUCCESS;
 }
 
@@ -198,14 +199,13 @@ int8_t RecvMsg(struct ServerToClient **msg) {
 
   *msg = malloc(sizeof(struct ServerToClient));
   (*msg)->id = 0;
-  if ((bytes = recv(client_sock, (*msg),
+  if ((bytes = recv(client_sock, *msg,
                     sizeof(struct ServerToClient), 0)) <= 0) {
     perror("recv()");
     ShutdownNetwork();
     return FAIL;
   }
-  printf("Bytes recv: %d\n", bytes);
-  return SUCCESS;
+  return bytes > 0;
 }
 
 void ShutdownNetwork(void) {
