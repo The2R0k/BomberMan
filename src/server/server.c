@@ -1,5 +1,9 @@
 #include "header.h"
 
+#include <sys/time.h>
+
+#define _XOPEN_SOURCE
+#define _DEFAULT_SOURCE
 #include <unistd.h>
 
 #define EPOLL_QUEUE_LEN 1
@@ -188,6 +192,14 @@ static int8_t RunServer() {
   struct Field field;
   socklen_t server_len, from_len;
   
+  struct timeval  elapsed,
+                  time_from,
+                  time_from_loop;
+  double dt = 0;
+
+  gettimeofday(&time_from, NULL);
+  gettimeofday(&time_from_loop, NULL);
+
   /* Creating sockets. */
   if (!CreateSockets(player_info)) {
     return 0;
@@ -229,18 +241,28 @@ static int8_t RunServer() {
   TimeStart();
 
   /* Program main cycle. */
+  gettimeofday(&time_from, NULL);
   while (INFINITU_CYCLE) {    
+    gettimeofday(&elapsed, NULL);
+    dt = (elapsed.tv_sec - time_from_loop.tv_sec) * 1000;
+    dt += (elapsed.tv_usec - time_from_loop.tv_usec) / 1000;
+    if (dt < 16) {
+      usleep(1000 * 16);
+      continue;
+    }
+    gettimeofday(&time_from_loop, NULL); 
     from_len = sizeof(struct sockaddr_in);
     bv = recvfrom(sock_udp, buffer, sizeof(struct ClientToServer), 0,
             (struct sockaddr *) &player_info[DEFAULT].from, &from_len);
     if (bv > 0) {
       SendLog("got new message");
+      printf("Bytes read: %hu\n", bv);
       printf("Id:%d, action:%d\n", buffer->id, buffer->doing);
       if (buffer->id != 0) {
         if (buffer->id > MAX_PLAYERS) {
            SendLog("unknown message sender");
         } else {
-          HandleClientAction(buffer->id, buffer->doing);
+          HandleClientAction(buffer->id - 1, buffer->doing);
         }
       } else {
         bv = DEFAULT;
@@ -285,8 +307,8 @@ static int8_t RunServer() {
         for (i = DEFAULT; i < CONNECT_TRY_MAX; ++i) {
           SendLog("try connecting to client");
           bv  = connect(player_info[new_player_flaq].sock_tcp, 
-              (struct sockaddr *) &(player_info[new_player_flaq].from),
-              from_len);
+                 (struct sockaddr *) &(player_info[new_player_flaq].from),
+                 from_len);
           perror("connecting::");
           if (bv == DEFAULT) {
             connect_flaq = TRUE;
@@ -322,7 +344,6 @@ static int8_t RunServer() {
           if (i == CONNECT_TRY_MAX - 1) {
             SendLog("Connecting filed: unknown");
           }
-          sleep(1);
         }
       }
     }
@@ -331,23 +352,29 @@ static int8_t RunServer() {
 /*          if(TimeCheck()>ONE_TICK_TIME){
       if(Tick()>=TICK_TO_START){
       TimeStart();                  */
-      Update(&action_table);
-/*    TimeStart();
-*/    for (i = DEFAULT; i < connects_count; ++i) {
-        msg->id = i + 1;
-        printf("ID = %d\n", msg->id);
-        memmove(&msg->field, game_field, sizeof(field));
-        msg->stats.score  = stats_table->player_stats[i].score;
-        msg->stats.length = stats_table->player_stats[i].length;
-        msg->stats.death  = stats_table->player_stats[i].death;
-        msg->stats.bomb   = stats_table->player_stats[i].bomb;
-        back_value_array[i]=send(player_info[i + 1].sock_tcp, msg,
-              sizeof(struct ServerToClient), 0);
-        
-        SendLog("sending to client");
-        printf("back value array %d = %d", i, back_value_array[i]);
+      gettimeofday(&elapsed, NULL);
+      dt = (elapsed.tv_sec - time_from.tv_sec) * 1000;
+      dt += (elapsed.tv_usec - time_from.tv_usec) / 1000;  
+      if (dt > 500) {
+        gettimeofday(&time_from, NULL);
+        Update(&action_table);
+  /*    TimeStart();
+  */    for (i = DEFAULT; i < connects_count; ++i) {
+          msg->id = i + 1;
+          printf("ID = %d\n", msg->id);
+          memmove(&msg->field, game_field, sizeof(field));
+          msg->stats.score  = stats_table->player_stats[i].score;
+          msg->stats.length = stats_table->player_stats[i].length;
+          msg->stats.death  = stats_table->player_stats[i].death;
+          msg->stats.bomb   = stats_table->player_stats[i].bomb;
+          back_value_array[i]=send(player_info[i + 1].sock_tcp, msg,
+                sizeof(struct ServerToClient), 0);
+          
+          SendLog("sending to client");
+          printf("back value array %d = %d", i, back_value_array[i]);
+        }
+        ActionTableClear(&action_table);
       }
-      ActionTableClear(&action_table);
 /*              for(i=DEFAULT;i<max_players;++i){
         if(back_value_array[i] < FALSE){
           action_table.player_info[i].suicide = TRUE;
@@ -361,7 +388,6 @@ static int8_t RunServer() {
     }
 /*          }
       } */
-    sleep(1);
     i++;
   }
 
