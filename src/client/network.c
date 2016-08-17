@@ -166,11 +166,14 @@ int8_t Connect(char *server_ip) {
     return FAIL;
   printf("Tcp connected\n");
 
-  if (!RecvMsg(&msg_with_id))
+  if (!RecvMsg(&msg_with_id)) {
+    free(msg_with_id);
     return FAIL;
+  }
 
   player_id = msg_with_id->id;
   printf("My id = %hu\n", player_id);
+  
   free(msg_with_id);
   msg_with_id = NULL;
 
@@ -181,17 +184,17 @@ int8_t Connect(char *server_ip) {
 
 int8_t HandleAction(enum Doing action) {
   struct ClientToServer* msg = malloc(sizeof(struct ClientToServer));
+  uint8_t msg_sent;
 
   msg->id = player_id;
   msg->doing = action;
 
-  if (!SendMsg(msg)) {
+  msg_sent = SendMsg(msg);
+  if (!msg_sent) {
     perror("HandleAction() error");
-    free(msg);
-    return FAIL;
   }
   free(msg);
-  return SUCCESS;
+  return msg_sent;
 }
 
 int8_t RecvMsg(struct ServerToClient **msg) {
@@ -202,6 +205,8 @@ int8_t RecvMsg(struct ServerToClient **msg) {
   if ((bytes = recv(client_sock, *msg,
                     sizeof(struct ServerToClient), 0)) <= 0) {
     perror("recv()");
+    free(*msg);
+    *msg = NULL;
     ShutdownNetwork();
     return FAIL;
   }

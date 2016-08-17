@@ -193,6 +193,7 @@ void StartGameLoop(void) {
         *thread_state = NEED_EXIT;
       } else {
         if (*thread_state == NEED_EXIT) {
+          free(buffer);
           break;
         }
         /* Denotes that data is accepted and
