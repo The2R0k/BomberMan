@@ -187,6 +187,8 @@ int8_t HandleAction(enum Doing action) {
   if (!SendMsg(&msg)) {
     perror("HandleAction() error");
     return FAIL;
+  } else {
+    printf("Sended action:%hu\n", action);
   }
   return SUCCESS;
 }

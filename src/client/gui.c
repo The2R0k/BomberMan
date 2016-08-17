@@ -9,17 +9,19 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdint.h>
-#include <sys/mman.h>
-#include <SDL2/SDL.h>
 
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <SDL2/SDL.h>
+
 #include "network.h"
 #include "keyboard.h"
 #include "../include/bgraphics.h"
+
+#define EXIT_KEY 1
 
 /*============================*/
 /*                            */
@@ -33,10 +35,11 @@ static void PrintMenu(void);
 
 static void StartNewGame(void);
 
-static void StartGameCircle(void);
+static void StartGameLoop(void);
 
 static void TryConnect(void);
 
+static int8_t HandleKeyPress(const Uint8 *keyboard_state);
 /*============================*/
 /*                            */
 /* Definitions.               */
@@ -67,7 +70,36 @@ void StartNewGame(void) {
   }
 }
 
-/* TODO: remove after debugging. */
+int8_t HandleKeyPress(const Uint8 *keyboard_state) {
+  enum Doing action;
+  
+  if (keyboard_state[SDL_SCANCODE_ESCAPE]) {
+    return EXIT_KEY;
+  }
+  
+  if (keyboard_state[SDL_SCANCODE_SPACE] ||
+      keyboard_state[SDL_SCANCODE_RETURN]) { 
+    action = PLANT_BOMB;
+    KeyBomb();
+  } else if (keyboard_state[SDL_SCANCODE_UP]) {
+    action = MOVE_TOP;
+    KeyUp();
+  } else if (keyboard_state[SDL_SCANCODE_DOWN]) {
+    action = MOVE_DOWN;
+    KeyDown();
+  } else if (keyboard_state[SDL_SCANCODE_RIGHT]) {
+    action = MOVE_RIGHT;
+    KeyRight();
+  } else if (keyboard_state[SDL_SCANCODE_LEFT]) {
+    action = MOVE_LEFT;
+    KeyLeft();
+  }
+  if (!HandleAction(action))
+    return -1;
+
+  return 0;
+}
+
 static void PrintMap(struct Field *field) {
   int i, j;
 
@@ -77,25 +109,35 @@ static void PrintMap(struct Field *field) {
     }
     printf("\n");
   }
-  printf("\n");
 }
 
-void StartGameCircle(void) {
-  uint8_t success = 1;
+void StartGameLoop(void) {
+  uint8_t msg_received = 1;
   struct ServerToClient *msg;
   /* Possible states of game cycle's threads 
    * STABLE = 0, NEED_REFRESH = 1, NEED_EXIT = 2 */
-  enum ThreadState *thread_state;
-  
-  key_t shm_key = ftok("tempfile", 1);
-  int shm_id = shmget(shm_key, sizeof(struct ServerToClient) + sizeof(enum ThreadState), IPC_CREAT | 0666);
+  enum ThreadState *thread_state; 
+  key_t shm_key;
+  int shm_id;
   void *shm_mem;
 
-  if ((shm_mem = shmat(shm_id, NULL, 0)) == (void *) -1) {
-    perror("shmat:");
-    exit(0);
+  shm_key = ftok("tempfile", 1);
+  if (shm_key == -1) {
+    perror("ftok() error");
+    exit(1);
   }
-  thread_state = ((enum ThreadState *) shm_mem) + sizeof(struct ServerToClient);
+  shm_id = shmget(shm_key, sizeof(struct ServerToClient) +
+           sizeof(enum ThreadState), IPC_CREAT | 0666);
+  if (shm_id == -1) {
+    perror("shmget() error");
+    exit(1);
+  }
+
+  if ((shm_mem = shmat(shm_id, NULL, 0)) == (void *) -1) {
+    perror("shmat() error");
+    exit(1);
+  }
+  thread_state = ((uint8_t *) shm_mem) + sizeof(struct ServerToClient);
   *thread_state = STABLE;
   /* Cleaning up the pointers */
   thread_state = NULL;
@@ -111,62 +153,48 @@ void StartGameCircle(void) {
     /* This struct contains SDL graphic sources */
     struct GraphSources *gs = malloc(sizeof(struct GraphSources));
     int i = 0;
+    int8_t key_handled;
     
     shm_mem = shmat(shm_id, NULL, 0);
-    if (shm_mem == (void *) -1)
-      perror("shmat");
     msg = shm_mem;
-    thread_state = ((enum ThreadState *) shm_mem) + sizeof(struct ServerToClient);
+    thread_state = ((uint8_t *) shm_mem) + sizeof(struct ServerToClient);
 
     /* Waiting for accepting the data */
     while (*thread_state != NEED_REFRESH)
       SDL_Delay(5);
-    /* Initializing graphics. This function (like a RefreshState and CleanGraph) 
-     *works with pointer to struct GraphSiurces */
+    /* Initializing graphics. This function 
+     * (like a RefreshState and CleanGraph) works with pointer to 
+     * struct GraphSiurces. */
     GraphicsInit(gs);
     while (*thread_state != NEED_EXIT) {
-      /* Polling the events */
+      /* Polling the events. */
       SDL_PollEvent(&event);
-      /* Refreshing events array in memory */ 
+      /* Refreshing events array in memory. */ 
       SDL_PumpEvents(); 
-      /* making delay value = 18 ms: 
-       *that's best choice to follow keyboard events 
-       *and do not load a processor */
+      /* making delay = 18 ms: 
+       * that's the best choice to follow keyboard events 
+       * and do not load a processor. */
       SDL_Delay(18);
 
       /* Keyboard events processing */
-      if (keyboard_state[SDL_SCANCODE_ESCAPE]) {
-        KeyEsc();
+      key_handled = HandleKeyPress(keyboard_state);
+      if (key_handled == EXIT_KEY ||
+          key_handled == -1) {
         *thread_state = NEED_EXIT;
         break;
-      }
-      if (keyboard_state[SDL_SCANCODE_SPACE] ||
-          keyboard_state[SDL_SCANCODE_RETURN]) { 
-        KeyBomb();
-      }
-      if (keyboard_state[SDL_SCANCODE_UP]) {
-        KeyUp();
-      }
-      if (keyboard_state[SDL_SCANCODE_DOWN]) {
-        KeyDown();
-      }
-      if (keyboard_state[SDL_SCANCODE_RIGHT]) {
-        KeyRight();
-      }
-      if (keyboard_state[SDL_SCANCODE_LEFT]) {
-        KeyLeft();
       }
       /* If data from server is accepted... */ 
       if (*thread_state == NEED_REFRESH) {
         printf("GRAPHICS: Refreshing...\t%d\n", *thread_state);
         RefreshState(&msg->field, &msg->stats, gs);
+        PrintMap(&msg->field);
         printf("GRAPHICS: Reseting...\n");
         *thread_state = STABLE;
         printf("GRAPHICS: msg's free!\t%d\n", *thread_state);
       }
       printf("Iteration:\t%d\n", ++i); 
     }
-    /* Cleaning up shared and graphic resourses from current thread */
+    /* Cleaning up shared and graphic resourses from current process. */
     CleanGraph(gs);
     free(gs);
     shmdt(shm_mem);
@@ -176,25 +204,26 @@ void StartGameCircle(void) {
     struct ServerToClient *buffer;
 
     shm_mem = shmat(shm_id, NULL, 0);
-    if (shm_mem == (void *) -1)
-      perror("shmat");
     msg = shm_mem;
+
     /* Initializating pointer to enum ThreadState memory area */
-    thread_state = ((enum ThreadState *) shm_mem) + sizeof(struct ServerToClient);
+    thread_state = ((uint8_t *) shm_mem) + sizeof(struct ServerToClient);
     /* While data is accepting successful and nobody pressed ESC */
-    while (success && (*thread_state != NEED_EXIT)) {
+    while (msg_received && (*thread_state != NEED_EXIT)) {
       /* Accepting the data from server */
-      if (!(success = RecvMsg(&buffer))) {
-        printf("Error: %d\n", success);
+      msg_received = RecvMsg(&buffer);
+      if (!msg_received) {
+        printf("Error: %d\n", msg_received);
         *thread_state = NEED_EXIT;
       } else {
-        if (*thread_state != NEED_EXIT)
-          /* Denotes that data is accepted and we need to refresh the render image */
-          *thread_state = NEED_REFRESH;
-        else if (*thread_state == NEED_EXIT) {
+        if (*thread_state == NEED_EXIT) {
           break;
         }
-        /* translating buffer to shared memory */
+        /* Denotes that data is accepted and
+         * we need to refresh the render image. */
+        *thread_state = NEED_REFRESH;
+        
+        /* Translating buffer to shared memory. */
         memmove(msg, buffer, sizeof(struct ServerToClient));
         free(buffer);
         buffer = NULL;
@@ -258,7 +287,7 @@ void TryConnect(void) {
     count = 0;
   }
   if (!is_error) {
-    StartGameCircle();
+    StartGameLoop();
   } else {
     printf("Error: can't connect to server.\n");
   }
