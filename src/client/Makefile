@@ -10,6 +10,7 @@ all : client
 
 client : $(objects) graphics.o
 	$(CC) -o client $^ $(LIBS)
+	touch tempfile
 
 main.o : gui.h
 main.o : network.h
@@ -22,6 +23,8 @@ $(objects) : %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean : 
-	-rm $(objects) client
+	-rm $(objects) client tempfile
 
 .PHONY : clean
+.PHONY : client
+

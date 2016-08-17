@@ -393,7 +393,7 @@ void PrintNums(int num, int y, struct GraphSources *gs) {
   int i = 0;
   char *buffer = malloc(sizeof(char) * 4);
   bzero(buffer, sizeof(buffer));
-  snprintf(buffer, 4, "%d", num);
+  sprintf(buffer, "%d", num);
   printf("%s\n", buffer);
   for (i = 0; i < 3; i++) {
     switch (buffer[i]) {
