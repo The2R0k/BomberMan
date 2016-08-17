@@ -7,7 +7,8 @@
 #include "../include/bgraphics.h"
 
 /* Adding elements to final image (before rendering) */
-void ApplySurface(int x, int y, int h, int w, SDL_Texture *tex, SDL_Renderer *rend) {
+void ApplySurface(int x, int y, int h, int w, SDL_Texture *tex,
+                  SDL_Renderer *rend) {
   SDL_Rect pos;
   pos.x = x;
   pos.y = y;
@@ -20,17 +21,19 @@ void ApplySurface(int x, int y, int h, int w, SDL_Texture *tex, SDL_Renderer *re
 void GraphicsInit(struct GraphSources *gs) {
   int i = 0;
   /* Initializing graphic area */
-  if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+  if (SDL_Init(SDL_INIT_VIDEO) != 0) {
     printf("SDL_Init Error: %s\n", SDL_GetError());
     exit(-1);
   }
   /* Initializing window */
-  if ((gs->win = SDL_CreateWindow("BomberMan - online", 100, 100, 19 * PCSIZE + 200, 19 * PCSIZE, SDL_WINDOW_BORDERLESS)) == NULL) {
+  if ((gs->win = SDL_CreateWindow("BomberMan - online", 100, 100,
+       19 * PCSIZE + 200, 19 * PCSIZE, SDL_WINDOW_BORDERLESS)) == NULL) {
     printf("SDL_CreateWindow Error: %s\n", SDL_GetError());
     exit(-1);
   }
   /* Initializing render */
-  if ((gs->ren = SDL_CreateRenderer(gs->win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC)) == NULL) { 
+  if ((gs->ren = SDL_CreateRenderer(gs->win, -1,
+       SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC)) == NULL) { 
     printf("SDL_CreateRenderer Error: %s\n", SDL_GetError());
     exit(-1);
   }
@@ -82,7 +85,7 @@ void GraphicsInit(struct GraphSources *gs) {
   SDL_FreeSurface(gs->bmp);
   /* # # */
   /* # Adding players textures # */
-  for (i = 0; i <= 3; i++) {
+  for (i = 0; i < 4; i++) {
     char way_to_sourcefile[INTERMEDIATE_STR_SIZE];
     sprintf(way_to_sourcefile, "../img/player%d.bmp", i + 1);
     if ((gs->bmp = SDL_LoadBMP(way_to_sourcefile)) == NULL) {
@@ -98,7 +101,7 @@ void GraphicsInit(struct GraphSources *gs) {
   }
   /* # # */
   /* # Adding players with bomb textures # */
-  for (i = 0; i <= 3; i++) {
+  for (i = 0; i < 4; i++) {
     char way_to_sourcefile[INTERMEDIATE_STR_SIZE];
     sprintf(way_to_sourcefile, "../img/player%db.bmp", i + 1);
     if ((gs->bmp = SDL_LoadBMP(way_to_sourcefile)) == NULL) {
@@ -186,7 +189,7 @@ void GraphicsInit(struct GraphSources *gs) {
   SDL_FreeSurface(gs->bmp);
   /* # # */
   /* # Adding nums textures # */
-  for (i = 0; i <= 9; i++) {
+  for (i = 0; i < 10; i++) {
     char way_to_sourcefile[INTERMEDIATE_STR_SIZE];
     sprintf(way_to_sourcefile, "../img/%d.bmp", i);
     if ((gs->bmp = SDL_LoadBMP(way_to_sourcefile)) == NULL) {
@@ -201,6 +204,7 @@ void GraphicsInit(struct GraphSources *gs) {
     SDL_FreeSurface(gs->bmp);
   }
   /* # # */
+  gs->bmp = NULL;
   SDL_RenderClear(gs->ren);
   SDL_RenderCopy(gs->ren, NULL, NULL, NULL);
   SDL_RenderPresent(gs->ren);  
@@ -210,65 +214,63 @@ void GraphicsInit(struct GraphSources *gs) {
 void PrintNums(int num, int y, struct GraphSources *gs) {
   int i = 0;
   char buffer[4];
+
   sprintf(buffer, "%d", num);
   printf("%s\n", buffer);
-  for (i = 0; i < 3; i++) {
-    if (buffer[i] != '\0')
-      ApplySurface(735 + i * 10, y, 18, 10, gs->digits[buffer[i] - '0'], gs->ren);
-    else
-      break;
+  for (i = 0; i < 3 && buffer[i] != '\0'; i++) {
+    ApplySurface(735 + i * 10, y, 18, 10,
+                 gs->digits[buffer[i] - '0'],gs->ren);
   }
 }
 
 /* Refreshing current game state*/
-void RefreshState(struct Field *field_loc, struct Dklb *dklb_loc, struct GraphSources *gs) {
+void RefreshState(struct Field *field_loc, struct Dklb *dklb_loc,
+                  struct GraphSources *gs) {
   int i = 0, j = 0;
+  enum Cell *current_cell = NULL;
   /* # Generating final image # */
   for (i = 0; i < FIELD_SIZE; i++) {
     for (j = 0; j < FIELD_SIZE; j++) {
-      switch(field_loc->location[i][j]){
+      current_cell = &field_loc->location[i][j];
+      switch (*current_cell) {
         case WALL:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->wall, gs->ren);
+          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE,
+                       gs->wall, gs->ren);
           break;
         case BOX:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->box, gs->ren);
+          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE,
+                       gs->box, gs->ren);
           break;
         case BOMB:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->bomb, gs->ren);
+          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE,
+                       gs->bomb, gs->ren);
           break;
         case PLAYER_1:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->players[0], gs->ren);
-          break;
         case PLAYER_2:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->players[1], gs->ren);
-          break;
         case PLAYER_3:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->players[2], gs->ren);
-          break;
         case PLAYER_4:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->players[3], gs->ren);
+          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE,
+                       gs->players[*current_cell - PLAYER_1], gs->ren);
           break;
         case FIRE:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->fire, gs->ren);
+          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE,
+                       gs->fire, gs->ren);
           break;
         case PLAYER_1_BOMB:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->players_b[0], gs->ren);
-          break;
         case PLAYER_2_BOMB:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->players_b[1], gs->ren);
-          break;
         case PLAYER_3_BOMB:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->players_b[2], gs->ren);
-          break;
         case PLAYER_4_BOMB:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->players_b[3], gs->ren);
+          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE,
+                       gs->players_b[*current_cell - PLAYER_1_BOMB], gs->ren);
           break;
         default:
-          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE, gs->empty, gs->ren); 
+          ApplySurface(j * PCSIZE, i * PCSIZE, PCSIZE, PCSIZE,
+                       gs->empty, gs->ren); 
           break;
       }
     }
   }
+  current_cell = NULL;
 
   /* Adding interface elements to final image */
   ApplySurface(646, 0, 646, 200, gs->interface, gs->ren);
@@ -294,17 +296,28 @@ void CleanGraph(struct GraphSources *gs) {
   SDL_DestroyTexture(gs->bomb);
   SDL_DestroyTexture(gs->fire);
   SDL_DestroyTexture(gs->interface);
-  SDL_DestroyTexture(gs->interface);
 
-  for (i = 0; i <= 9; i++) {
+  for (i = 0; i < 10; i++) {
     SDL_DestroyTexture(gs->digits[i]);
   }
-  for (i = 0; i <= 3; i++) {
+  for (i = 0; i < 4; i++) {
     SDL_DestroyTexture(gs->players[i]);
-  }
-  for (i = 0; i <= 3; i++) {
     SDL_DestroyTexture(gs->players_b[i]);
   }
+
+  SDL_DestroyTexture(gs->menuNG);
+  SDL_DestroyTexture(gs->menuJN);
+  SDL_DestroyTexture(gs->menuRS);
+  SDL_DestroyTexture(gs->menuEX);
+  SDL_DestroyTexture(gs->menuNGC);
+  SDL_DestroyTexture(gs->menuJNC);
+  SDL_DestroyTexture(gs->menuRSC);
+  SDL_DestroyTexture(gs->menuEXC);
+
+  SDL_DestroyTexture(gs->score);
+  SDL_DestroyTexture(gs->length);
+  SDL_DestroyTexture(gs->death);
+  SDL_DestroyTexture(gs->bombi);
 
   SDL_DestroyRenderer(gs->ren);
   SDL_DestroyWindow(gs->win);
