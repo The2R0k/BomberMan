@@ -18,7 +18,7 @@
 #include <arpa/inet.h>
 
 #include <errno.h>
-#include <sys/times.h>
+#include <sys/time.h>
 
 #include "../include/common.h"
 #include "../include/stats_table.h"

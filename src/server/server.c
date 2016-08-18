@@ -1,7 +1,5 @@
 #include "header.h"
 
-#include <sys/time.h>
-
 struct ConnectInfo {
   int id;
   int status;
