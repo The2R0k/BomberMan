@@ -1,31 +1,39 @@
+/**
+  \file
+  \brief File contains structs to provide client-server interaction.
+*/
+
 #ifndef _CLIENT_SERVER_H_
 #define _CLIENT_SERVER_H_
 
 #include "position.h"
 #include "common.h"
 
+/**
+  \brief Enum to represent user actions.
+*/
 enum Doing {
   NOTHING = 0,
-  BOMB = 1,
+  PLANT_BOMB = 1,
   MOVE_LEFT,
   MOVE_RIGHT,
   MOVE_TOP,
   MOVE_DOWN
-};
+} __attribute__((packed));
 
-/* Struct for send udp message to server
- * first time sending: id=0, bomb={0;0}, move={0;0}.
- * If server is not full, server send new id
- * next time, must sending with that id.
- */
- struct ClientToServer {
+/**
+  \brief This struct should be sent to server from client.
+*/
+struct ClientToServer {
   uint8_t id;
   enum Doing doing;
 } __attribute__((packed));
 
-/* Struct to recv message from server.
- * First time sending new id and new field.
- */
+/**
+  \brief Struct to recv message from server.
+
+  First time sending new id, and new field.
+*/
 struct ServerToClient {
   uint8_t id;
   struct Field field;
