@@ -110,9 +110,13 @@ static void KillPlayer(int victim_num, int killer_num,
                        struct Position murder_pos);
 
 
+static void Clamp(int8_t *value, int8_t delta, int8_t min, int8_t max);
+
 static void DetonateBomb(struct Position bomb_pos);
 
 static void DetonateSide(uint8_t horizontal, int bomb_num);
+
+static int8_t DetonateCell(struct Position current_pos, int bomb_num);
 
 static void FillField(void);
 
@@ -209,6 +213,7 @@ void PlantingPhase(struct ActionTable *action_table) {
 }
 
 void FillFireCell(struct Position pos, int player_num) {
+  g_field.location[pos.y][pos.x] = FIRE;
   g_fire_field.cell[pos.y][pos.x].time = FIRE_TIME;
   g_fire_field.cell[pos.y][pos.x].player_num = player_num;
 }
@@ -390,13 +395,17 @@ void DetonateBomb(struct Position bomb_pos) {
       KillPlayer(i, i, bomb_pos);
     }
   }
-  g_field.location[bomb_pos.y][bomb_pos.x] = FIRE;
+  FillFireCell(bomb_pos, bomb_num);
   DetonateSide(VERTICAL, bomb_num);
   DetonateSide(HORIZONTAL, bomb_num);
   
   g_player_info[bomb_num].bomb_info.d_time = -1;
   g_player_info[bomb_num].bomb_info.pos.x = 0;
   g_player_info[bomb_num].bomb_info.pos.y = 0;
+}
+
+static uint8_t Ratio(int8_t a, int8_t b, int8_t less) {
+  return less ? (a < b) : (a > b);
 }
 
 void Clamp(int8_t *value, int8_t delta, int8_t min, int8_t max) {
@@ -408,78 +417,87 @@ void Clamp(int8_t *value, int8_t delta, int8_t min, int8_t max) {
 }
 
 void DetonateSide(uint8_t horizontal, int bomb_num) {
-  int8_t begin_coord,
+  int8_t bomb_coord,
          *current_coord,
          *end_coord;
   uint8_t bomb_radius;
-  struct Position begin_pos,
+  struct Position bomb_pos,
                   current_pos,
                   end_pos;
-  enum Cell *current_cell;
   int i = 0;
   int dc; /* delta coord (dx or dy). */
+  int8_t less;
+  int8_t need_continue; 
 
-  begin_pos = end_pos = current_pos = g_player_info[bomb_num].bomb_info.pos;
   bomb_radius = g_table.player_stats[bomb_num].length;
-
-  begin_coord = horizontal ? begin_pos.x : begin_pos.y;
+  bomb_pos    = end_pos = current_pos = g_player_info[bomb_num].bomb_info.pos;
+  bomb_coord  = horizontal ? bomb_pos.x : bomb_pos.y;
   current_coord = horizontal ? &current_pos.x : &current_pos.y;
-  *current_coord -= bomb_radius;
-  if (*current_coord < MIN_COORD)
-    *current_coord = MIN_COORD;
-
   end_coord = horizontal ? &end_pos.x : &end_pos.y;
-  *end_coord += bomb_radius + 1;
-  if (*end_coord >= MAX_COORD)
-    *end_coord = MAX_COORD;
-    
+   
   for (i = 0; i < 2; ++i) {
-    *current_coord = begin_coord;
+    *current_coord = bomb_coord;
+    *end_coord = bomb_coord;
     if (i == 0) {
+      /* Left or up. */
       dc = -1;
-      Clamp(current_coord, dc, MIN_COORD, begin_coord - 1);
-      Clamp(end_coord, dc * bomb_radius, MIN_COORD, begin_coord - 1);
+      Clamp(current_coord, dc, MIN_COORD, bomb_coord);
+      Clamp(end_coord, -(bomb_radius + 1), 0, bomb_coord);
+      less = 0;
     } else {
+      /* Right or down. */
       dc = 1;
-      Clamp(current_coord, dc, begin_coord + dc, MAX_COORD - 1);
-      Clamp(end_coord, dc * bomb_radius, begin_coord + dc, MAX_COORD - 1);
+      Clamp(current_coord, dc, bomb_coord + dc, MAX_COORD);
+      Clamp(end_coord, bomb_radius + 1, bomb_coord + dc, MAX_COORD);
+      less = 1;
     }
-    for ( ; *current_coord < *end_coord; *current_coord += dc) {
-      current_cell = &g_field.location[current_pos.y][current_pos.x];
-      switch (*current_cell) {
-        case EMPTY:
-          *current_cell = FIRE;
-        case FIRE:
-          FillFireCell(current_pos, bomb_num);
-          break;
-        case BOX:
-          *current_cell = EMPTY;
-          break;
-        case WALL:
-          break;
-        case BOMB:
-          DetonateBomb(current_pos);
-          break;
-        case PLAYER_1:
-        case PLAYER_2:
-        case PLAYER_3:
-        case PLAYER_4:
-          FillFireCell(current_pos, bomb_num);
-          KillPlayer((int) (*current_cell - PLAYER_1), bomb_num, current_pos);
-          break;
-        case PLAYER_1_BOMB:
-        case PLAYER_2_BOMB:
-        case PLAYER_3_BOMB:
-        case PLAYER_4_BOMB:
-          FillFireCell(current_pos, bomb_num);
-          DetonateBomb(current_pos);
-          /* Now *current_cell == FIRE, so we need sub FIRE
-           * instead of PLAYER_1_BOMB. */
-          KillPlayer((int) ((*current_cell) - FIRE), bomb_num, current_pos);
-          break;
-      }
+
+    for ( ; Ratio(*current_coord, *end_coord, less); *current_coord += dc) {
+      need_continue = DetonateCell(current_pos, bomb_num);
+      if (!need_continue)
+        break;
     }
   }
+}
+
+int8_t DetonateCell(struct Position current_pos, int bomb_num) {
+  enum Cell *current_cell;
+  int8_t need_continue;
+
+  current_cell = &g_field.location[current_pos.y][current_pos.x];
+  need_continue = (*current_cell == EMPTY) || (*current_cell == FIRE);
+  switch (*current_cell) {
+    case EMPTY:
+    case FIRE:
+      FillFireCell(current_pos, bomb_num);
+      break;
+    case BOX:
+      *current_cell = EMPTY;
+      break;
+    case WALL:
+      break;
+    case BOMB:
+      DetonateBomb(current_pos);
+      break;
+    case PLAYER_1:
+    case PLAYER_2:
+    case PLAYER_3:
+    case PLAYER_4:
+      KillPlayer((int) (*current_cell - PLAYER_1), bomb_num, current_pos);
+      FillFireCell(current_pos, bomb_num);
+      break;
+    case PLAYER_1_BOMB:
+    case PLAYER_2_BOMB:
+    case PLAYER_3_BOMB:
+    case PLAYER_4_BOMB:
+      FillFireCell(current_pos, bomb_num);
+      /* Now *current_cell == FIRE, so we need sub FIRE
+       * instead of PLAYER_1_BOMB. */
+      KillPlayer((int) ((*current_cell) - FIRE), bomb_num, current_pos);
+      DetonateBomb(current_pos);
+      break;
+  }
+  return need_continue;
 }
 
 void InitializeFireField(void) {
