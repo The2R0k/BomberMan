@@ -349,12 +349,11 @@ static int8_t RunServer() {
   return DEFAULT;
 }
 
-int main()
-{
+int main(void) {
   int bv;
   bv = RunServer();
   if (bv) {
     printf("Something went wrong!\n");
   }
-  return DEFAULT;
+  return 0;
 }
