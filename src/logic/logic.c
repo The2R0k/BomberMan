@@ -540,44 +540,42 @@ void Update(struct ActionTable *action_table) {
 }
 
 void FillField(void) {
-  enum Cell **field;
   int i, j;
   int to_deletei, to_deletej;
-  field = g_field.location;
 
   for (i = 0; i < FIELD_SIZE; ++i) {
     for (j = 0; j < FIELD_SIZE; ++j) {
-      field[i][j] = BOX;
+      g_field.location[i][j] = BOX;
     }
   }
 
   for (i = 2; i < FIELD_SIZE; i += 2) {
     for (j = 2; j < FIELD_SIZE; j += 2) {
-      field[i][j] = WALL;
+      g_field.location[i][j] = WALL;
     }
   }
 
-  field[1][1] = EMPTY;
-  field[1][2] = EMPTY;
-  field[2][1] = EMPTY;
+  g_field.location[1][1] = EMPTY;
+  g_field.location[1][2] = EMPTY;
+  g_field.location[2][1] = EMPTY;
 
-  field[FIELD_SIZE - 2][1] = EMPTY;
-  field[FIELD_SIZE - 2][2] = EMPTY;
-  field[FIELD_SIZE - 3][1] = EMPTY;
+  g_field.location[FIELD_SIZE - 2][1] = EMPTY;
+  g_field.location[FIELD_SIZE - 2][2] = EMPTY;
+  g_field.location[FIELD_SIZE - 3][1] = EMPTY;
 
-  field[FIELD_SIZE - 2][FIELD_SIZE - 2] = EMPTY;
-  field[FIELD_SIZE - 2][FIELD_SIZE - 3] = EMPTY;
-  field[FIELD_SIZE - 3][FIELD_SIZE - 2] = EMPTY;
+  g_field.location[FIELD_SIZE - 2][FIELD_SIZE - 2] = EMPTY;
+  g_field.location[FIELD_SIZE - 2][FIELD_SIZE - 3] = EMPTY;
+  g_field.location[FIELD_SIZE - 3][FIELD_SIZE - 2] = EMPTY;
 
-  field[1][FIELD_SIZE - 2] = EMPTY;
-  field[1][FIELD_SIZE - 3] = EMPTY;
-  field[2][FIELD_SIZE - 2] = EMPTY;
+  g_field.location[1][FIELD_SIZE - 2] = EMPTY;
+  g_field.location[1][FIELD_SIZE - 3] = EMPTY;
+  g_field.location[2][FIELD_SIZE - 2] = EMPTY;
 
   for (i = 0; i < FIELD_SIZE; ++i) {
-    field[i][0] =
-    field[0][i] =
-    field[i][FIELD_SIZE - 1] =
-    field[FIELD_SIZE - 1][i] = WALL;
+    g_field.location[i][0] =
+    g_field.location[0][i] =
+    g_field.location[i][FIELD_SIZE - 1] =
+    g_field.location[FIELD_SIZE - 1][i] = WALL;
   }
 
   for (i = 0; i < 28; ++i) {
@@ -607,24 +605,6 @@ void SetUp(struct Field **game_field,
   /* Code below instantiate 2-dimentional array
    * First dimention is an array of pointers
    * Second dimention is an linear buffer of enum Cell */
-  g_field.location = malloc(sizeof(void *) * FIELD_SIZE);
-  if (g_field.location == 0) {
-    perror("SetUp(): Field alloc(1) error");
-    return;
-  }
-  memset(g_field.location, 0, sizeof(void *) * FIELD_SIZE);
-
-  g_field.location[0] = malloc(sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
-  if (g_field.location == 0) {
-    perror("SetUp(): Field alloc(2) error");
-    return;
-  }
-  memset(g_field.location[0], 0, sizeof(enum Cell) * FIELD_SIZE * FIELD_SIZE);
-
-  for (i = 1; i < FIELD_SIZE; ++i) {
-    g_field.location[i] = g_field.location[0] + FIELD_SIZE * i;
-  }
-
   FillField();
 
   *game_field = &g_field;
@@ -640,9 +620,4 @@ void SetUp(struct Field **game_field,
 
   InitializeFireField();
   InitializePlayersInfo();
-}
-
-void TearDown(void) {
-  free(g_field.location[0]);
-  free(g_field.location);
 }

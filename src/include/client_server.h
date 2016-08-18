@@ -23,6 +23,10 @@ enum Doing {
 
 /**
   \brief This struct should be sent to server from client.
+  
+  First sending: id=0, move={0;0}, bomb={0}
+  if server not full, server send new id
+  next time, must sending with that i
 */
 struct ClientToServer {
   uint8_t id;
@@ -32,7 +36,7 @@ struct ClientToServer {
 /**
   \brief Struct to recv message from server.
 
-  First time sending new id, and new field.
+  First sending: new id and new field.
 */
 struct ServerToClient {
   uint8_t id;
