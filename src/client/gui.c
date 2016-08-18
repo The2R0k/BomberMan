@@ -4,6 +4,7 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <netinet/in.h>
@@ -239,12 +240,7 @@ void TryConnect(void) {
       exit(0);
 
     /* Removing break symbol. */
-    for (i = 0; i < count; ++i) {
-      if (ip_address[i] == '\n') {
-        ip_address[i] = '\0';
-        break;
-      }
-    }
+    ip_address[strlen(ip_address) - 1] = '\0';
 
     if (IsAddressValid(ip_address)) {
       if (Connect(ip_address)) {
@@ -281,7 +277,11 @@ void Run(void) {
   while (!need_exit) {
     PrintMenu();
     getline(&line, &count, stdin);
-    c = line[0];
+    if (strlen(line) > 2) {
+      c = '3';
+    } else {
+      c = line[0];
+    }
     if ('0' <= c && c <= '2') {
       need_exit = 1;
     }
