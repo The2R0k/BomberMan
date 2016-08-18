@@ -6,12 +6,12 @@
 #ifndef _CLIENT_GUI_H_
 #define _CLIENT_GUI_H_
 
-void Run(void);
+/**
+  \brief Main function that run apllication.
 
-enum ThreadState {
-	STABLE = 0,
-	NEED_REFRESH = 1,
-	NEED_EXIT = 2
-} __attribute__((packed));
+  This func manages the apllication: prints menus, invokes other func to
+   manage input and graphics.
+*/
+void Run(void);
 
 #endif /* _CLIENT_GUI_H_ */

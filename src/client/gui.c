@@ -21,6 +21,15 @@
 
 #define EXIT_KEY 1
 
+/**
+  \brief Enum that represents state of thread.
+*/
+enum ThreadState {
+	STABLE = 0,
+	NEED_REFRESH,
+	NEED_EXIT
+} __attribute__((packed));
+
 /*============================*/
 /*                            */
 /* Helpfull functions.        */
@@ -64,6 +73,7 @@ void StartNewGame(void) {
   if (fork() == 0) {
     execlp("./server", "server", NULL);
   } else { 
+    sleep(1); /* Need to run server. */
     Connect("127.0.0.1"); /* TEST: */
   }
 }
@@ -220,7 +230,6 @@ void TryConnect(void) {
   char *ip_address = NULL;
   size_t count = 0;
   int8_t need_exit = 0;
-  size_t i;
   int8_t is_error = 0;
   
   while (!need_exit && !is_error) {
