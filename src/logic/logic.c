@@ -399,17 +399,30 @@ void DetonateBomb(struct Position bomb_pos) {
   g_player_info[bomb_num].bomb_info.pos.y = 0;
 }
 
+void Clamp(int8_t *value, int8_t delta, int8_t min, int8_t max) {
+  *value += delta;
+  if (*value < min)
+    *value = min;
+  if (*value > max)
+    *value = max;
+}
+
 void DetonateSide(uint8_t horizontal, int bomb_num) {
-  uint8_t *current_coord,
-          *end_coord;
+  int8_t begin_coord,
+         *current_coord,
+         *end_coord;
   uint8_t bomb_radius;
-  struct Position current_pos,
+  struct Position begin_pos,
+                  current_pos,
                   end_pos;
   enum Cell *current_cell;
+  int i = 0;
+  int dc; /* delta coord (dx or dy). */
 
-  end_pos = current_pos = g_player_info[bomb_num].bomb_info.pos;
+  begin_pos = end_pos = current_pos = g_player_info[bomb_num].bomb_info.pos;
   bomb_radius = g_table.player_stats[bomb_num].length;
 
+  begin_coord = horizontal ? begin_pos.x : begin_pos.y;
   current_coord = horizontal ? &current_pos.x : &current_pos.y;
   *current_coord -= bomb_radius;
   if (*current_coord < MIN_COORD)
@@ -419,41 +432,52 @@ void DetonateSide(uint8_t horizontal, int bomb_num) {
   *end_coord += bomb_radius + 1;
   if (*end_coord >= MAX_COORD)
     *end_coord = MAX_COORD;
-
-  for (*current_coord = *current_coord; *current_coord < *end_coord;
-       ++(*current_coord)) {
-    current_cell = &g_field.location[current_pos.y][current_pos.x];
-    switch (*current_cell) {
-      case EMPTY:
-        *current_cell = FIRE;
-      case FIRE:
-        FillFireCell(current_pos, bomb_num);
-        break;
-      case BOX:
-        *current_cell = EMPTY;
-        break;
-      case WALL:
-        break;
-      case BOMB:
-        DetonateBomb(current_pos);
-        break;
-      case PLAYER_1:
-      case PLAYER_2:
-      case PLAYER_3:
-      case PLAYER_4:
-        FillFireCell(current_pos, bomb_num);
-        KillPlayer((int) (*current_cell - PLAYER_1), bomb_num, current_pos);
-        break;
-      case PLAYER_1_BOMB:
-      case PLAYER_2_BOMB:
-      case PLAYER_3_BOMB:
-      case PLAYER_4_BOMB:
-        FillFireCell(current_pos, bomb_num);
-        DetonateBomb(current_pos);
-        /* Now *current_cell == FIRE, so we need sub FIRE
-         * instead of PLAYER_1_BOMB. */
-        KillPlayer((int) ((*current_cell) - FIRE), bomb_num, current_pos);
-        break;
+    
+  for (i = 0; i < 2; ++i) {
+    *current_coord = begin_coord;
+    if (i == 0) {
+      dc = -1;
+      Clamp(current_coord, dc, MIN_COORD, begin_coord - 1);
+      Clamp(end_coord, dc * bomb_radius, MIN_COORD, begin_coord - 1);
+    } else {
+      dc = 1;
+      Clamp(current_coord, dc, begin_coord + dc, MAX_COORD - 1);
+      Clamp(end_coord, dc * bomb_radius, begin_coord + dc, MAX_COORD - 1);
+    }
+    for ( ; *current_coord < *end_coord; *current_coord += dc) {
+      current_cell = &g_field.location[current_pos.y][current_pos.x];
+      switch (*current_cell) {
+        case EMPTY:
+          *current_cell = FIRE;
+        case FIRE:
+          FillFireCell(current_pos, bomb_num);
+          break;
+        case BOX:
+          *current_cell = EMPTY;
+          break;
+        case WALL:
+          break;
+        case BOMB:
+          DetonateBomb(current_pos);
+          break;
+        case PLAYER_1:
+        case PLAYER_2:
+        case PLAYER_3:
+        case PLAYER_4:
+          FillFireCell(current_pos, bomb_num);
+          KillPlayer((int) (*current_cell - PLAYER_1), bomb_num, current_pos);
+          break;
+        case PLAYER_1_BOMB:
+        case PLAYER_2_BOMB:
+        case PLAYER_3_BOMB:
+        case PLAYER_4_BOMB:
+          FillFireCell(current_pos, bomb_num);
+          DetonateBomb(current_pos);
+          /* Now *current_cell == FIRE, so we need sub FIRE
+           * instead of PLAYER_1_BOMB. */
+          KillPlayer((int) ((*current_cell) - FIRE), bomb_num, current_pos);
+          break;
+      }
     }
   }
 }
