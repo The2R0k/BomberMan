@@ -2,35 +2,6 @@
 
 #include <sys/time.h>
 
-#define _XOPEN_SOURCE
-#define _DEFAULT_SOURCE
-#include <unistd.h>
-
-#define EPOLL_QUEUE_LEN 1
-#define PORT_UDP 4444
-#define PORT_TCP_S 4445 
-#define PORT_TCP_CLIENT 9999
-#define SERVER_IP "25.18.240.83"
-
-#define TCP_CONNECTS 5
-#define MAX_PLAYERS 4
-#define MIN_PLAYERS 2  /* How many player should be connected before Update. */
-
-#define MAKE_TCP_SOCK 1
-#define MAKE_UDP_SOCK 2
-
-#define TICK_TO_START 6
-#define INFINITU_CYCLE 1
-#define DEFAULT 0        /* Default value. */
-#define CONNECT_TRY_MAX 5 
-#define ONE_TICK_TIME 500 /* Time between one Update in mSec. */
-
-#define TRUE 1
-#define FALSE 0
-
-#define ONLINE 1
-#define OFFLINE 0
-
 struct ConnectInfo {
   int id;
   int status;
@@ -39,13 +10,8 @@ struct ConnectInfo {
 };
 
 static uint8_t connects_count = DEFAULT;
-static uint8_t tick_counter = DEFAULT;
-static struct tms tmsBegin, tmsEnd;
 static int sock_udp;
-
-static int Tick(void) {
-  return tick_counter++;
-}
+static struct ActionTable action_table;
 
 static void SendLog(const char *message) {
   printf("New log message: %s\n", message);
@@ -96,27 +62,14 @@ static int MakeSocket(int flaq) {
   return bv;
 }
 
-
-void TimeStart(void) {
-  times(&tmsBegin); 
-}
-
-static long TimeCheck(void) {
-  times(&tmsEnd);
-  Tick();
-
-  return (((tmsEnd.tms_utime - tmsBegin.tms_utime) +
-          (tmsEnd.tms_stime - tmsBegin.tms_stime)) * 1000);
-}
-
-static void ActionTableClear(struct ActionTable *action_table) {
+static void ActionTableClear() {
   int i;
 
   for(i = 0; i < MAX_PLAYERS; ++i) {
-    action_table->player_info[i].suicide = DEFAULT;
-    action_table->player_info[i].bomb = DEFAULT;
-    action_table->player_info[i].move_pos.x = DEFAULT;
-    action_table->player_info[i].move_pos.y = DEFAULT;
+    action_table.player_info[i].suicide = DEFAULT;
+    action_table.player_info[i].bomb = DEFAULT;
+    action_table.player_info[i].move_pos.x = DEFAULT;
+    action_table.player_info[i].move_pos.y = DEFAULT;
   }
 }
 
@@ -143,7 +96,6 @@ static int8_t CreateSockets(struct ConnectInfo player_info[]) {
   return 1;
 }
 
-static struct ActionTable action_table;
 
 static void HandleClientAction(uint8_t player_num, enum Doing action) {
   action_table.player_info[player_num].suicide = FALSE;
@@ -176,7 +128,7 @@ static void HandleClientAction(uint8_t player_num, enum Doing action) {
 }
 
 static int8_t RunServer() {
-  int i,bv;
+  int i, bv;
   int back_value_array[MAX_PLAYERS];
   int new_player_flaq = FALSE;
   int connect_flaq = FALSE;
@@ -238,7 +190,6 @@ static int8_t RunServer() {
   SetUp(&game_field, &stats_table);
   buffer = (struct ClientToServer*) malloc(sizeof(struct ClientToServer));
   msg   = (struct ServerToClient*) malloc(sizeof(struct ServerToClient));
-  TimeStart();
 
   /* Program main cycle. */
   gettimeofday(&time_from, NULL);
@@ -373,7 +324,7 @@ static int8_t RunServer() {
           SendLog("sending to client");
           printf("back value array %d = %d", i, back_value_array[i]);
         }
-        ActionTableClear(&action_table);
+        ActionTableClear();
       }
 /*              for(i=DEFAULT;i<max_players;++i){
         if(back_value_array[i] < FALSE){
