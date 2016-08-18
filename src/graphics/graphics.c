@@ -216,7 +216,6 @@ void PrintNums(int num, int y, struct GraphSources *gs) {
   char buffer[4];
 
   sprintf(buffer, "%d", num);
-  printf("%s\n", buffer);
   for (i = 0; i < 3 && buffer[i] != '\0'; i++) {
     ApplySurface(735 + i * 10, y, 18, 10,
                  gs->digits[buffer[i] - '0'],gs->ren);
