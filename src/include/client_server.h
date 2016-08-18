@@ -9,9 +9,6 @@
 #include "position.h"
 #include "common.h"
 
-#define CLIENT_MSG_SIZE sizeof(struct ClientToServer)
-#define SERVER_MSG_SIZE sizeof(struct ServerToClient)
-
 /**
   \brief Enum to represent user actions.
 */
