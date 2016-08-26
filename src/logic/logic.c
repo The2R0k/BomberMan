@@ -13,15 +13,15 @@
 #include "include/fire_field.h"
 #include "include/player_info.h"
 
-#define NO_FIRE -1
-#define FIRE_TIME 4
+#define NO_FIRE         -1
+#define FIRE_TIME       4
 #define DETONATION_TIME 3
 #define DISCONNECT_TIME 6
 
-#define RESPAWN_TIME 11
+#define RESPAWN_TIME    11
 
-#define VERTICAL 0
-#define HORIZONTAL 1
+#define VERTICAL    0
+#define HORIZONTAL  1
 
 #define MIN_COORD 1
 #define MAX_COORD 18
