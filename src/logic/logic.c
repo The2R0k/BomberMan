@@ -32,10 +32,10 @@
 /*                            */
 /* Global variables.          */
 /*                            */
-static struct Field g_field;
-static struct StatsTable g_table;
-static struct FireField g_fire_field;
-static struct PlayerInfo g_player_info[MAX_PLAYER_AMOUNT];
+static struct Field       g_field;
+static struct StatsTable  g_table;
+static struct FireField   g_fire_field;
+static struct PlayerInfo  g_player_info[MAX_PLAYER_AMOUNT];
 
 /*============================*/
 /*                            */
@@ -87,44 +87,100 @@ static void FirePhase(void);
 */
 static void RespawnPhase(void);
 
-
-
-
+/**
+  \brief Fill cell with fire.
+  \param pos Position on map.
+  \param player_num Player number.
+*/
 static void FillFireCell(struct Position pos, int player_num);
 
+/**
+  \brief Disconnect players from game.
+  \param player_num Player that should be disconnected.
+*/
 static void DisconnectPlayer(int player_num);
 
+/**
+  \brief Check if player can plant bomb.
+  \param player_num Player num that should plant bomb.
+  \return Can player plant the bomb or not (1 or 0).
+*/
 static int CanPlant(int player_num);
 
+/**
+  \brief Plant player's bomb.
+  \param player_num Player num.
+*/
 static void PlantBomb(uint8_t player_num);
 
+/**
+  \brief Check if player can move.
+  \param player_num Player that should be moved.
+  \param next_pos Position.
+  \return Can player move or not (1 or 0).
+*/
 static int CanMove(int player_num, struct Position next_pos);
 
+/**
+  \brief Move player to next position.
+  \param player_num Player num.
+  \param next_pos 
+*/
 static void MovePlayer(int player_num, struct Position next_pos);
 
+/**
+  \brief Respawn player.
+  \param player_num Player that should be respawned.
+*/
 static void RespawnPlayer(int player_num);
 
+/**
+  \brief Decrease respawn time.
+  \param player_num Player that should be respawned.
+*/
 static void DecreaseResTime(int player_num);
 
+/**
+  \brief Kill the player.
+  \param victim_num Player that should be killed.
+  \param killer_num Player that kills.
+  \param murder_pos Position of murder.
+*/
 static void KillPlayer(int victim_num, int killer_num,
                        struct Position murder_pos);
 
-
-static void Clamp(int8_t *value, int8_t delta, int8_t min, int8_t max);
-
+/**
+  \brief Detonate the bomb on defined position.
+  \param bomb_pos Bomb position.
+*/
 static void DetonateBomb(struct Position bomb_pos);
 
+/**
+  \brief Detonate the side (horizontal or vertical).
+  \param horizontal Horizontal side or vertical.
+  \param bomb_num Player number that owns bomb.
+*/
 static void DetonateSide(uint8_t horizontal, int bomb_num);
 
-static int8_t DetonateCell(struct Position current_pos, int bomb_num);
-
+/**
+  \brief Fill game field with staring values.
+*/
 static void FillField(void);
 
+/**
+  \brief Initialize fire field with NO_FIRE time.
+*/
 static void InitializeFireField(void);
 
+/**
+  \brief Initialize players inside information.
+*/
 static void InitializePlayersInfo(void);
 
-/* Definitons. */
+/*============================*/
+/*                            */
+/* Definitions.               */
+/*                            */
 void ConvertActionTable(struct ActionTable *action_table) {
   struct Position pos;
   int i;
